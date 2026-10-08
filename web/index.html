@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <script>
+    // iOS zooms into inputs under 16px on focus; maximum-scale stops that but still allows pinch zoom on iOS.
+    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) document.querySelector('meta[name=viewport]').content += ', maximum-scale=1';
+  </script>
+  <title>Sleep Outfit</title>
+  <meta name="description" content="What to dress our toddler in for bed.">
+  <meta name="theme-color" content="#f3f2f2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Sleep Outfit">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

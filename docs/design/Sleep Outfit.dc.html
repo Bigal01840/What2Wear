@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-a1fc3a71-5542-4624-8a62-3163c9bd4a71/styles.css">
+<script src="_ds/modernist-a1fc3a71-5542-4624-8a62-3163c9bd4a71/_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--color-neutral-300)}a{color:var(--color-accent-700)}a:hover{color:var(--color-accent-800)}.scr::-webkit-scrollbar{display:none}input[type=number]{-moz-appearance:textfield}input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-wrap:wrap;gap:48px;align-items:flex-start;padding:40px;font-family:var(--font-body);color:var(--color-text)">
+<div style="position:relative;width:390px;height:844px;flex:none;background:var(--color-bg);border:2px solid var(--color-text);overflow:hidden;box-shadow:var(--shadow-lg)">
+  <div style="height:44px;display:flex;align-items:center;gap:8px;padding:0 20px;font-size:14px;font-weight:600;border-bottom:1px solid var(--color-neutral-300)">
+    <span style="flex:1">21:04</span><span style="font-size:12px">{{ settings.city }}</span>
+  </div>
+
+  <div class="scr" style="position:absolute;top:44px;left:0;right:0;bottom:72px;overflow-y:auto;scrollbar-width:none">
+
+    <sc-if value="{{ isTonight }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div style="padding:16px 20px 14px;border-bottom:2px solid var(--color-divider);display:flex;align-items:flex-end;gap:12px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700)">{{ todayLabel }}</div>
+            <h1 style="margin:2px 0 0;font-size:34px">Tonight</h1>
+          </div>
+          <button class="btn btn-secondary btn-icon" onClick="{{ openSheet }}" aria-label="Settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"></path></svg></button>
+        </div>
+
+        <sc-if value="{{ hasPending }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ goMorning }}" style="display:flex;width:100%;align-items:center;gap:12px;padding:14px 20px;background:var(--color-accent);color:var(--color-bg);border:0;text-align:left;font:inherit;cursor:pointer;border-bottom:2px solid var(--color-divider)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2;flex:none"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+            <div style="flex:1;min-width:0"><div style="font-weight:800;font-size:15px">How was {{ pendingLabel }}?</div><div style="font-size:12px">Rate it so tonight’s pick can learn from it</div></div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="m9 18 6-6-6-6"></path></svg>
+          </button>
+        </sc-if>
+
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-bottom:2px solid var(--color-divider)">
+          <div style="padding:12px 12px 12px 20px;border-right:2px solid var(--color-divider);border-bottom:2px solid var(--color-divider);display:flex;flex-direction:column;gap:2px">
+            <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Room now</div>
+            <div style="display:flex;align-items:baseline"><input type="number" step="0.1" inputmode="decimal" value="{{ room }}" onChange="{{ setRoom }}" onFocus="{{ selectAll }}" aria-label="Room temperature" style="width:86px;padding:0;border:0;border-bottom:2px solid var(--color-neutral-300);background:transparent;font:inherit;font-size:30px;font-weight:800;line-height:1.1;color:inherit" style-focus="border-bottom-color:var(--color-accent);outline:none"><span style="font-size:22px;font-weight:800">°</span></div>
+            <div style="font-size:11px;color:var(--color-neutral-700);height:16px">Nursery</div>
+            <div style="display:flex;gap:4px;margin-top:6px">
+              <button class="btn btn-secondary" style="width:44px;height:36px;padding:0" onClick="{{ roomDown }}" aria-label="Lower"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M5 12h14"></path></svg></button>
+              <button class="btn btn-secondary" style="width:44px;height:36px;padding:0" onClick="{{ roomUp }}" aria-label="Raise"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M5 12h14M12 5v14"></path></svg></button>
+            </div>
+          </div>
+          <div style="padding:12px 12px 12px 16px;border-bottom:2px solid var(--color-divider);display:flex;flex-direction:column;gap:2px">
+            <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Outside 7pm–7am</div>
+            <div style="font-size:30px;font-weight:800;line-height:1.1">{{ outdoorLabel }}</div>
+            <div style="font-size:11px;color:{{ outdoorSrcColor }};height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ outdoorSrc }}</div>
+            <div style="display:flex;gap:4px;margin-top:6px">
+              <button class="btn btn-secondary" style="width:44px;height:36px;padding:0" onClick="{{ outDown }}" aria-label="Lower"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M5 12h14"></path></svg></button>
+              <button class="btn btn-secondary" style="width:44px;height:36px;padding:0" onClick="{{ outUp }}" aria-label="Raise"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M5 12h14M12 5v14"></path></svg></button>
+            </div>
+          </div>
+          <div style="padding:12px 12px 12px 20px;border-right:2px solid var(--color-divider);display:flex;flex-direction:column;gap:2px">
+            <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Radiator</div>
+            <div style="display:flex;align-items:baseline"><input type="number" step="0.5" inputmode="decimal" value="{{ thermo }}" onChange="{{ setThermo }}" onFocus="{{ selectAll }}" aria-label="Radiator setpoint" style="width:86px;padding:0;border:0;border-bottom:2px solid var(--color-neutral-300);background:transparent;font:inherit;font-size:30px;font-weight:800;line-height:1.1;color:inherit" style-focus="border-bottom-color:var(--color-accent);outline:none"><span style="font-size:22px;font-weight:800">°</span></div>
+            <div style="font-size:11px;color:var(--color-neutral-700);height:16px">Thermostat</div>
+            <div style="display:flex;gap:4px;margin-top:6px">
+              <button class="btn btn-secondary" style="width:44px;height:36px;padding:0" onClick="{{ thermoDown }}" aria-label="Lower"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M5 12h14"></path></svg></button>
+              <button class="btn btn-secondary" style="width:44px;height:36px;padding:0" onClick="{{ thermoUp }}" aria-label="Raise"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M5 12h14M12 5v14"></path></svg></button>
+            </div>
+          </div>
+          <div style="padding:12px 12px 12px 16px;display:flex;flex-direction:column;gap:2px">
+            <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Humidity</div>
+            <div style="display:flex;align-items:baseline"><input type="number" step="0.5" inputmode="decimal" value="{{ humidity }}" onChange="{{ setHum }}" onFocus="{{ selectAll }}" aria-label="Humidity" style="width:86px;padding:0;border:0;border-bottom:2px solid var(--color-neutral-300);background:transparent;font:inherit;font-size:30px;font-weight:800;line-height:1.1;color:inherit" style-focus="border-bottom-color:var(--color-accent);outline:none"><span style="font-size:22px;font-weight:800">%</span></div>
+            <div style="font-size:11px;color:var(--color-neutral-700);height:16px">Nursery</div>
+            <div style="display:flex;gap:4px;margin-top:6px">
+              <button class="btn btn-secondary" style="width:44px;height:36px;padding:0" onClick="{{ humDown }}" aria-label="Lower"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M5 12h14"></path></svg></button>
+              <button class="btn btn-secondary" style="width:44px;height:36px;padding:0" onClick="{{ humUp }}" aria-label="Raise"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M5 12h14M12 5v14"></path></svg></button>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:2px solid var(--color-divider)">
+          <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700);flex:1">Nursery door</div>
+          <div class="seg"><sc-for list="{{ doorOpts }}" as="o" hint-placeholder-count="2"><label class="seg-opt" style="min-height:36px"><input type="radio" name="door" checked="{{ o.active }}" onChange="{{ o.pick }}">{{ o.l }}</label></sc-for></div>
+        </div>
+        <div style="padding:10px 20px 12px;border-bottom:2px solid var(--color-divider)">
+          <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:8px">Tonight {{ settings.child }} is</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ healthOpts }}" as="h" hint-placeholder-count="3"><button onClick="{{ h.toggle }}" style="min-height:36px;padding:6px 12px;border:1px solid {{ h.border }};background:{{ h.bg }};color:{{ h.fg }};font:inherit;font-size:13px;font-weight:600;cursor:pointer">{{ h.l }}</button></sc-for></div>
+        </div>
+        <sc-if value="{{ hasFever }}"><div style="padding:12px 20px;background:var(--color-accent);color:var(--color-bg);border-bottom:2px solid var(--color-divider);font-size:13px;line-height:1.4"><div style="font-size:15px;font-weight:800">Fever: dress lighter</div>Target lowered by 0.5 TOG. Don’t add layers to “sweat it out”. If you’re worried, call NHS 111 or your GP.</div></sc-if>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-bottom:2px solid var(--color-divider);background:var(--color-surface)">
+          <div style="padding:10px 12px 10px 20px;border-right:2px solid var(--color-divider)">
+            <div style="font-size:11px;color:var(--color-neutral-700)">Expected overnight</div>
+            <div style="font-size:17px;font-weight:800">{{ overnightLabel }} in the room</div>
+          </div>
+          <div style="padding:10px 12px">
+            <div style="font-size:11px;color:var(--color-neutral-700)">Target warmth</div>
+            <div style="font-size:17px;font-weight:800">{{ targetLabel }} TOG total</div>
+          </div>
+        </div>
+
+        <sc-if value="{{ noBags }}">
+          <div style="padding:20px;display:flex;flex-direction:column;gap:8px">
+            <div style="font-weight:800;font-size:17px">No sleeping bag available</div>
+            <div style="font-size:14px">Add one to the wardrobe or mark one as out of the wash.</div>
+            <button class="btn btn-primary" style="align-self:flex-start" onClick="{{ goWardrobe }}">Open wardrobe</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hasOutfit }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:18px 20px 4px">
+            <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700)">Dress {{ settings.child }} ({{ ageLabel }}) in</div>
+            <div style="display:flex;align-items:flex-end;gap:10px;margin:2px 0 10px">
+              <div style="font-size:64px;font-weight:800;line-height:.95;letter-spacing:-.03em;color:var(--color-accent)">{{ totalLabel }}</div>
+              <div style="font-size:15px;font-weight:800;padding-bottom:6px;flex:1">TOG</div>
+              <span class="tag" style="margin-bottom:8px;background:{{ diffBg }};color:{{ diffFg }}">{{ diffLabel }}</span>
+            </div>
+            <div style="border-bottom:2px solid var(--color-divider)">
+              <sc-for list="{{ outfitRows }}" as="r" hint-placeholder-count="3">
+                <div style="display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--color-divider)">
+                  <div style="width:52px;height:52px;background:var(--color-surface);overflow:hidden;display:flex;align-items:center;justify-content:flex-start;padding-left:6px">
+                    <sc-if value="{{ r.hasPhoto }}" hint-placeholder-val="{{ false }}"><div class="grayscale" role="img" aria-label="Item photo" style="width:52px;height:52px;margin-left:-6px;background-size:cover;background-position:center;background-image:{{ r.bgImg }}"></div></sc-if>
+                    <sc-if value="{{ r.noPhoto }}"><span style="font-size:13px;font-weight:800;color:var(--color-neutral-600)">{{ r.thumbText }}</span></sc-if>
+                  </div>
+                  <div style="min-width:0">
+                    <div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-neutral-700)">{{ r.label }}</div>
+                    <div style="font-size:15px;font-weight:600;line-height:1.25;color:{{ r.nameColor }}">{{ r.name }}</div>
+                    <div style="font-size:12px;color:var(--color-neutral-700)">{{ r.meta }}</div>
+                  </div>
+                  <button class="btn btn-secondary" style="height:44px;gap:6px;justify-content:flex-start" onClick="{{ r.swap }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"></path></svg>Swap</button>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ edited }}">
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 0;font-size:12px;color:var(--color-neutral-700)"><span style="flex:1">You’ve swapped layers manually.</span><button class="btn btn-ghost" onClick="{{ resetOverrides }}">Back to recommended</button></div>
+            </sc-if>
+          </div>
+
+          <div style="padding:12px 20px 20px">
+            <sc-if value="{{ notLogged }}" hint-placeholder-val="{{ true }}">
+              <button class="btn btn-primary" style="width:100%;height:52px;justify-content:flex-start;padding:0 16px;font-size:16px;gap:10px" onClick="{{ logTonight }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M20 6 9 17l-5-5"></path></svg>Dressed — log tonight</button>
+            </sc-if>
+            <sc-if value="{{ isLogged }}">
+              <div style="display:flex;flex-direction:column;gap:8px;padding:12px 14px;background:var(--color-surface)">
+                <div style="display:flex;gap:8px;align-items:center;font-weight:800;font-size:15px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5;color:var(--color-accent)"><path d="M20 6 9 17l-5-5"></path></svg>Logged · {{ loggedTog }} TOG</div>
+                <div style="font-size:13px">Rate it in the morning, with the nursery reading.</div>
+                <sc-if value="{{ logDiffers }}"><button class="btn btn-secondary" style="align-self:flex-start" onClick="{{ logTonight }}">Update log with this outfit</button></sc-if>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="padding:16px 20px;border-top:2px solid var(--color-divider)">
+            <h6 style="margin:0 0 10px">Why this outfit</h6>
+            <div style="display:flex;flex-direction:column">
+              <sc-for list="{{ reasons }}" as="x" hint-placeholder-count="3">
+                <div style="display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px;padding:8px 0;border-top:1px solid var(--color-divider);font-size:14px;line-height:1.4">
+                  <span style="font-weight:800;color:var(--color-accent-700)">{{ x.n }}</span><span style="text-wrap:pretty">{{ x.t }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <sc-if value="{{ showAlts }}" hint-placeholder-val="{{ true }}">
+            <div style="padding:16px 20px 24px;border-top:2px solid var(--color-divider)">
+              <h6 style="margin:0 0 10px">Also close</h6>
+              <div style="display:flex;flex-direction:column;gap:2px;background:var(--color-divider)">
+                <sc-for list="{{ alts }}" as="a" hint-placeholder-count="2">
+                  <button onClick="{{ a.use }}" style="display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px;background:var(--color-bg);border:0;text-align:left;font:inherit;color:inherit;cursor:pointer" style-hover="background:var(--color-surface)">
+                    <span style="font-size:22px;font-weight:800">{{ a.total }}</span>
+                    <span style="font-size:13px;line-height:1.35">{{ a.names }}</span>
+                    <span style="font-size:12px;font-weight:800;color:var(--color-accent-700)">Use</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isForecast }}">
+      <div>
+        <div style="padding:16px 20px 14px;border-bottom:2px solid var(--color-divider)">
+          <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700)">Next 3 nights · {{ settings.city }}</div>
+          <h1 style="margin:2px 0 0;font-size:34px">Forecast</h1>
+        </div>
+        <div style="padding:10px 20px;border-bottom:2px solid var(--color-divider);background:var(--color-surface);font-size:12px;line-height:1.4">Uses the 7pm–7am forecast with tonight’s room ({{ roomLabel }}), radiator ({{ thermoLabel }}) and door settings.</div>
+        <sc-if value="{{ noFc }}">
+          <div style="padding:20px;display:flex;flex-direction:column;gap:8px"><div style="font-weight:800;font-size:17px">Forecast unavailable</div><div style="font-size:14px">Check the postcode in Settings, then try again.</div><button class="btn btn-secondary" style="align-self:flex-start" onClick="{{ fetchWeather }}">Try again</button></div>
+        </sc-if>
+        <sc-for list="{{ fcRows }}" as="f" hint-placeholder-count="3">
+          <div style="border-bottom:2px solid var(--color-divider)">
+            <div style="display:flex;align-items:baseline;gap:8px;padding:14px 20px 8px"><h4 style="margin:0;flex:1">{{ f.label }}</h4><span style="font-size:12px;color:var(--color-neutral-700)">{{ f.outside }}</span></div>
+            <div style="display:grid;grid-template-columns:100px minmax(0,1fr);border-top:1px solid var(--color-divider)">
+              <div style="padding:10px 12px 12px 20px;border-right:2px solid var(--color-divider)"><div style="font-size:36px;font-weight:800;line-height:1;color:var(--color-accent)">{{ f.tog }}</div><div style="font-size:11px;font-weight:800">TOG</div><div style="font-size:11px;color:var(--color-neutral-700);margin-top:6px">Room ≈ {{ f.room }}</div></div>
+              <div style="padding:10px 20px 12px 12px;display:flex;flex-direction:column;gap:4px"><sc-for list="{{ f.names }}" as="x" hint-placeholder-count="3"><div style="font-size:13px;line-height:1.3">{{ x.n }}</div></sc-for></div>
+            </div>
+            <sc-if value="{{ f.hasWash }}"><div style="display:flex;gap:10px;padding:10px 20px;background:var(--color-accent-100);color:var(--color-accent-800);font-size:13px;line-height:1.35;border-top:1px solid var(--color-divider)"><b>Laundry</b><span>{{ f.washText }}</span></div></sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isNap }}">
+      <div>
+        <div style="padding:16px 20px 14px;border-bottom:2px solid var(--color-divider)">
+          <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700)">{{ napKicker }}</div>
+          <h1 style="margin:2px 0 0;font-size:34px">Nap</h1>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:12px 20px;border-bottom:2px solid var(--color-divider)">
+          <div class="field"><label>Start</label><input class="input" type="time" style="min-height:44px" value="{{ napStart }}" onChange="{{ setNapStart }}"></div>
+          <div class="field"><label>End</label><input class="input" type="time" style="min-height:44px" value="{{ napEnd }}" onChange="{{ setNapEnd }}"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-bottom:2px solid var(--color-divider)">
+          <div style="padding:12px 12px 12px 20px;border-right:2px solid var(--color-divider);display:flex;flex-direction:column;gap:2px">
+            <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Room now</div>
+            <div style="display:flex;align-items:baseline"><input type="number" step="0.1" inputmode="decimal" value="{{ napRoom }}" onChange="{{ setNapRoom }}" onFocus="{{ selectAll }}" aria-label="Nap room temperature" style="width:86px;padding:0;border:0;border-bottom:2px solid var(--color-neutral-300);background:transparent;font:inherit;font-size:30px;font-weight:800;line-height:1.1;color:inherit" style-focus="border-bottom-color:var(--color-accent);outline:none"><span style="font-size:22px;font-weight:800">°</span></div>
+            <div style="display:flex;gap:4px;margin-top:6px"><button class="btn btn-secondary" style="width:44px;height:36px;padding:0" onClick="{{ napRoomDown }}" aria-label="Lower"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M5 12h14"></path></svg></button><button class="btn btn-secondary" style="width:44px;height:36px;padding:0" onClick="{{ napRoomUp }}" aria-label="Raise"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M5 12h14M12 5v14"></path></svg></button></div>
+          </div>
+          <div style="padding:12px 12px 12px 16px;display:flex;flex-direction:column;gap:2px">
+            <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Outside during nap</div>
+            <div style="font-size:30px;font-weight:800;line-height:1.1">{{ napOutLabel }}</div>
+            <div style="font-size:11px;color:var(--color-neutral-700)">{{ napOutSrc }}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:2px solid var(--color-divider)">
+          <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700);flex:1">Door</div>
+          <div class="seg"><sc-for list="{{ napDoorOpts }}" as="o" hint-placeholder-count="2"><label class="seg-opt" style="min-height:36px"><input type="radio" name="napdoor" checked="{{ o.active }}" onChange="{{ o.pick }}">{{ o.l }}</label></sc-for></div>
+        </div>
+        <div style="padding:10px 20px;border-bottom:2px solid var(--color-divider);background:var(--color-surface)">
+          <div style="font-size:17px;font-weight:800">{{ napTargetLabel }} TOG target</div>
+          <div style="font-size:12px;color:var(--color-neutral-800)">{{ napOffNote }}</div>
+        </div>
+        <div style="padding:14px 20px 4px"><h6 style="margin:0 0 8px">Pick an outfit</h6></div>
+        <div style="display:flex;flex-direction:column;gap:6px;padding:0 20px">
+          <sc-for list="{{ napOpts }}" as="c" hint-placeholder-count="3">
+            <button onClick="{{ c.pick }}" style="display:grid;grid-template-columns:60px minmax(0,1fr);gap:10px;align-items:start;padding:12px;border:{{ c.border }};background:{{ c.bg }};font:inherit;color:inherit;text-align:left;cursor:pointer">
+              <span><span style="display:block;font-size:24px;font-weight:800;line-height:1;color:{{ c.togColor }}">{{ c.tog }}</span><span style="font-size:10px;font-weight:800">TOG</span></span>
+              <span style="display:flex;flex-direction:column;gap:2px"><sc-if value="{{ c.best }}"><span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700)">Best fit</span></sc-if><span style="font-size:13px;line-height:1.35">{{ c.names }}</span></span>
+            </button>
+          </sc-for>
+        </div>
+        <div style="padding:14px 20px 20px">
+          <sc-if value="{{ napCanLog }}" hint-placeholder-val="{{ true }}">
+            <button class="btn btn-primary" style="width:100%;height:52px;justify-content:flex-start;padding:0 16px;font-size:16px" onClick="{{ logNap }}">Dressed — log this nap</button>
+          </sc-if>
+          <sc-if value="{{ napNeedsRating }}">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <h4 style="margin:0">How was the nap?</h4>
+              <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:2px solid var(--color-divider)"><sc-for list="{{ napRatingOpts }}" as="o" hint-placeholder-count="5"><button onClick="{{ o.pick }}" style="height:80px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;padding:8px 6px;border:0;border-left:{{ o.edge }};background:{{ o.bg }};color:{{ o.fg }};font:inherit;text-align:left;cursor:pointer"><span style="font-size:18px;font-weight:800;line-height:1">{{ o.sym }}</span><span style="font-size:12px;font-weight:600;line-height:1.15">{{ o.l }}</span></button></sc-for></div>
+              <button class="btn btn-primary" style="width:100%;height:48px;justify-content:flex-start;padding:0 16px" disabled="{{ napRateDisabled }}" onClick="{{ saveNapRating }}">Save and learn</button>
+            </div>
+          </sc-if>
+        </div>
+        <sc-if value="{{ hasNapRows }}">
+          <table class="table" style="font-size:13px;border-top:2px solid var(--color-divider)">
+            <thead><tr><th style="padding-left:20px">Recent naps</th><th>Room</th><th>TOG</th><th style="padding-right:20px">Result</th></tr></thead>
+            <tbody><sc-for list="{{ napRows }}" as="n" hint-placeholder-count="2"><tr><td style="padding-left:20px">{{ n.label }}</td><td>{{ n.room }}</td><td style="font-weight:800">{{ n.tog }}</td><td style="padding-right:20px"><span class="tag" style="background:{{ n.bg }};color:{{ n.fg }}">{{ n.rl }}</span></td></tr></sc-for></tbody>
+          </table>
+        </sc-if>
+        <div style="height:24px"></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isMorning }}">
+      <div>
+        <div style="padding:16px 20px 14px;border-bottom:2px solid var(--color-divider)">
+          <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700)">{{ fbKicker }}</div>
+          <h1 style="margin:2px 0 0;font-size:34px">Morning check</h1>
+        </div>
+        <sc-if value="{{ learnMsg }}">
+          <div style="padding:12px 20px;background:var(--color-surface);border-bottom:2px solid var(--color-divider);font-size:14px;display:flex;gap:10px;align-items:flex-start"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5;flex:none;margin-top:2px;color:var(--color-accent)"><path d="M20 6 9 17l-5-5"></path></svg><span>{{ learnMsg }}</span></div>
+        </sc-if>
+        <sc-if value="{{ hasFb }}">
+          <div>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:2px solid var(--color-divider)">
+              <div style="padding:10px 12px 10px 20px;border-right:2px solid var(--color-divider)"><div style="font-size:11px;color:var(--color-neutral-700)">Room overnight</div><div style="font-size:20px;font-weight:800">{{ fbN.overnight }}</div></div>
+              <div style="padding:10px 12px;border-right:2px solid var(--color-divider)"><div style="font-size:11px;color:var(--color-neutral-700)">Outside avg</div><div style="font-size:20px;font-weight:800">{{ fbN.outdoor }}</div></div>
+              <div style="padding:10px 12px"><div style="font-size:11px;color:var(--color-neutral-700)">Wore</div><div style="font-size:20px;font-weight:800">{{ fbN.tog }} TOG</div></div>
+            </div>
+            <div style="padding:10px 20px;border-bottom:2px solid var(--color-divider);font-size:13px">{{ fbN.names }}</div>
+            <div style="padding:14px 20px 0"><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:6px">Nursery this morning</div></div>
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:2px solid var(--color-divider);border-bottom:2px solid var(--color-divider)">
+              <div style="padding:10px 12px 12px 20px;border-right:2px solid var(--color-divider);display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:11px;color:var(--color-neutral-700)">Room temp</div>
+                <div style="display:flex;align-items:baseline"><input type="number" step="0.1" inputmode="decimal" value="{{ fbRoom }}" onChange="{{ setFbRoom }}" onFocus="{{ selectAll }}" aria-label="Morning room temperature" style="width:86px;padding:0;border:0;border-bottom:2px solid var(--color-neutral-300);background:transparent;font:inherit;font-size:30px;font-weight:800;line-height:1.1;color:inherit" style-focus="border-bottom-color:var(--color-accent);outline:none"><span style="font-size:22px;font-weight:800">°</span></div>
+                <div style="display:flex;gap:4px"><button class="btn btn-secondary" style="width:44px;height:36px;padding:0" onClick="{{ fbRoomDown }}" aria-label="Lower"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M5 12h14"></path></svg></button><button class="btn btn-secondary" style="width:44px;height:36px;padding:0" onClick="{{ fbRoomUp }}" aria-label="Raise"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M5 12h14M12 5v14"></path></svg></button></div>
+              </div>
+              <div style="padding:10px 12px 12px 16px;display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:11px;color:var(--color-neutral-700)">Humidity</div>
+                <div style="display:flex;align-items:baseline"><input type="number" step="0.5" inputmode="decimal" value="{{ fbHum }}" onChange="{{ setFbHum }}" onFocus="{{ selectAll }}" aria-label="Morning humidity" style="width:86px;padding:0;border:0;border-bottom:2px solid var(--color-neutral-300);background:transparent;font:inherit;font-size:30px;font-weight:800;line-height:1.1;color:inherit" style-focus="border-bottom-color:var(--color-accent);outline:none"><span style="font-size:22px;font-weight:800">%</span></div>
+                <div style="display:flex;gap:4px"><button class="btn btn-secondary" style="width:44px;height:36px;padding:0" onClick="{{ fbHumDown }}" aria-label="Lower"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M5 12h14"></path></svg></button><button class="btn btn-secondary" style="width:44px;height:36px;padding:0" onClick="{{ fbHumUp }}" aria-label="Raise"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M5 12h14M12 5v14"></path></svg></button></div>
+              </div>
+            </div>
+
+            <div style="padding:18px 20px 8px">
+              <h4 style="margin:0 0 12px">How did {{ settings.child }} sleep?</h4>
+              <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:2px solid var(--color-divider)">
+                <sc-for list="{{ ratingOpts }}" as="o" hint-placeholder-count="5">
+                  <button onClick="{{ o.pick }}" style="height:92px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;padding:8px 6px;border:0;border-left:{{ o.edge }};background:{{ o.bg }};color:{{ o.fg }};font:inherit;text-align:left;cursor:pointer">
+                    <span style="font-size:20px;font-weight:800;line-height:1">{{ o.sym }}</span>
+                    <span style="font-size:12px;font-weight:600;line-height:1.15">{{ o.l }}</span>
+                  </button>
+                </sc-for>
+              </div>
+              <div style="display:flex;font-size:11px;color:var(--color-neutral-700);margin-top:4px"><span style="flex:1">Colder</span><span>Warmer</span></div>
+            </div>
+
+            <div style="padding:12px 20px 4px">
+              <div style="font-size:12px;color:var(--color-neutral-700);margin-bottom:8px">Anything you noticed? (optional)</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <sc-for list="{{ signOpts }}" as="s" hint-placeholder-count="6">
+                  <button onClick="{{ s.toggle }}" style="min-height:36px;padding:6px 12px;border:1px solid {{ s.border }};background:{{ s.bg }};color:{{ s.fg }};font:inherit;font-size:13px;cursor:pointer">{{ s.l }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="padding:14px 20px 0">
+              <div style="font-size:12px;color:var(--color-neutral-700);margin-bottom:8px">Health that night (flagged nights count less towards learning)</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ fbHealthOpts }}" as="h" hint-placeholder-count="3"><button onClick="{{ h.toggle }}" style="min-height:36px;padding:6px 12px;border:1px solid {{ h.border }};background:{{ h.bg }};color:{{ h.fg }};font:inherit;font-size:13px;font-weight:600;cursor:pointer">{{ h.l }}</button></sc-for></div>
+            </div>
+            <div class="field" style="padding:14px 20px 0">
+              <label>Note</label>
+              <textarea class="input" style="min-height:64px" placeholder="e.g. Woke at 3am, back of neck damp" value="{{ fb.note }}" onChange="{{ onFbNote }}"></textarea>
+            </div>
+            <div style="padding:16px 20px 24px">
+              <button class="btn btn-primary" style="width:100%;height:52px;justify-content:flex-start;padding:0 16px;font-size:16px" disabled="{{ fbDisabled }}" onClick="{{ saveFb }}">Save and learn</button>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noFb }}">
+          <div style="padding:24px 20px;display:flex;flex-direction:column;gap:8px">
+            <div style="font-size:20px;font-weight:800">All nights rated</div>
+            <div style="font-size:14px">Log tonight’s outfit at bedtime, then come back here in the morning.</div>
+            <button class="btn btn-secondary" style="align-self:flex-start;margin-top:6px" onClick="{{ goTonight }}">Go to Tonight</button>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isWardrobe }}">
+      <div>
+        <div style="padding:16px 20px 14px;border-bottom:2px solid var(--color-divider);display:flex;align-items:flex-end;gap:12px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700)">{{ wardrobeKicker }}</div>
+            <h1 style="margin:2px 0 0;font-size:34px">Wardrobe</h1>
+          </div>
+          <button class="btn btn-primary" style="height:44px;gap:6px" onClick="{{ newItem }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M5 12h14M12 5v14"></path></svg>Add</button>
+        </div>
+        <div class="scr" style="display:flex;gap:6px;padding:12px 20px;overflow-x:auto;scrollbar-width:none;border-bottom:2px solid var(--color-divider)">
+          <sc-for list="{{ filters }}" as="f" hint-placeholder-count="6">
+            <button onClick="{{ f.pick }}" style="flex:none;height:36px;padding:0 12px;border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};font:inherit;font-size:13px;font-weight:600;cursor:pointer">{{ f.l }}</button>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px;background:var(--color-divider);border-bottom:2px solid var(--color-divider)">
+          <sc-for list="{{ itemCards }}" as="it" hint-placeholder-count="6">
+            <button onClick="{{ it.open }}" style="display:flex;flex-direction:column;background:var(--color-bg);border:0;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer;opacity:{{ it.opacity }}" style-hover="background:var(--color-surface)">
+              <div style="width:100%;aspect-ratio:1/1;background:var(--color-surface);overflow:hidden;position:relative;display:flex;flex-direction:column;justify-content:space-between;padding:10px">
+                <sc-if value="{{ it.hasPhoto }}" hint-placeholder-val="{{ false }}"><div class="grayscale" role="img" aria-label="Item photo" style="position:absolute;inset:0;background-size:cover;background-position:center;background-image:{{ it.bgImg }}"></div></sc-if>
+                <sc-if value="{{ it.noPhoto }}"><span style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">{{ it.catShort }}</span></sc-if>
+                <sc-if value="{{ it.noPhoto }}"><span style="font-size:40px;font-weight:800;line-height:1;color:var(--color-neutral-500)">{{ it.togNum }}</span></sc-if>
+                <sc-if value="{{ it.inWash }}"><span class="tag" style="position:absolute;top:8px;right:8px;background:var(--color-text);color:var(--color-bg)">In the wash</span></sc-if>
+              </div>
+              <div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:2px">
+                <div style="font-size:14px;font-weight:800;line-height:1.2">{{ it.name }}</div>
+                <div style="font-size:12px;color:var(--color-neutral-700)">{{ it.meta }}</div>
+              </div>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isHistory }}">
+      <div>
+        <div style="padding:16px 20px 14px;border-bottom:2px solid var(--color-divider)">
+          <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700)">{{ ratedCount }} nights rated</div>
+          <h1 style="margin:2px 0 0;font-size:34px">What it’s learned</h1>
+        </div>
+        <div style="padding:16px 20px;border-bottom:2px solid var(--color-divider);display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center">
+          <div><div style="font-size:44px;font-weight:800;line-height:1;color:var(--color-accent)">{{ offsetLabel }}</div><div style="font-size:12px;font-weight:800">TOG vs guide</div></div>
+          <div style="font-size:14px;line-height:1.4;text-wrap:pretty">{{ insight }}</div>
+        </div>
+        <div style="padding:14px 20px 8px;border-bottom:2px solid var(--color-divider)">
+          <h6 style="margin:0 0 6px">TOG worn vs overnight room temp</h6>
+          <svg width="350" height="196" viewBox="0 0 350 196" style="display:block;font-family:var(--font-body)">
+            <sc-for list="{{ yTicks }}" as="t" hint-placeholder-count="5"><g><line x1="32" x2="346" y1="{{ t.y }}" y2="{{ t.y }}" style="stroke:var(--color-neutral-300);stroke-width:1"></line><text x="0" y="{{ t.ty }}" style="font-size:10px;fill:var(--color-neutral-700)">{{ t.l }}</text></g></sc-for>
+            <sc-for list="{{ xTicks }}" as="t" hint-placeholder-count="7"><text x="{{ t.x }}" y="190" style="font-size:10px;fill:var(--color-neutral-700)">{{ t.l }}</text></sc-for>
+            <polyline points="{{ guidePts }}" style="fill:none;stroke:var(--color-text);stroke-width:1.5"></polyline>
+            <polyline points="{{ personalPts }}" style="fill:none;stroke:var(--color-accent);stroke-width:2;stroke-dasharray:5 4"></polyline>
+            <sc-for list="{{ dots }}" as="d" hint-placeholder-count="5"><rect x="{{ d.x }}" y="{{ d.y }}" width="10" height="10" style="fill:{{ d.fill }};stroke:{{ d.stroke }};stroke-width:2"></rect></sc-for>
+          </svg>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:11px;padding:6px 0 4px;color:var(--color-neutral-800)">
+            <span style="display:flex;gap:5px;align-items:center"><span style="width:14px;height:2px;background:var(--color-text)"></span>Standard guide</span>
+            <span style="display:flex;gap:5px;align-items:center"><span style="width:14px;height:2px;background:var(--color-accent)"></span>Adjusted for {{ settings.child }}</span>
+            <span style="display:flex;gap:5px;align-items:center"><span style="width:9px;height:9px;border:2px solid var(--color-text)"></span>Cool</span>
+            <span style="display:flex;gap:5px;align-items:center"><span style="width:9px;height:9px;background:var(--color-text)"></span>Right</span>
+            <span style="display:flex;gap:5px;align-items:center"><span style="width:9px;height:9px;background:var(--color-accent)"></span>Warm</span>
+          </div>
+        </div>
+        <table class="table" style="font-size:13px">
+          <thead><tr><th style="padding-left:20px">Night · tap to edit</th><th>Overnight</th><th>TOG</th><th style="padding-right:20px">Result</th></tr></thead>
+          <tbody>
+            <sc-for list="{{ nightRows }}" as="n" hint-placeholder-count="5">
+              <tr onClick="{{ n.open }}" style="cursor:pointer" title="Edit this night"><td style="padding-left:20px;text-decoration:underline;text-decoration-color:var(--color-neutral-400);text-underline-offset:3px">{{ n.label }}</td><td>{{ n.overnight }}</td><td style="font-weight:800">{{ n.tog }}</td><td style="padding-right:20px"><div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px"><span class="tag" style="background:{{ n.bg }};color:{{ n.fg }}">{{ n.rl }}</span><sc-if value="{{ n.extra }}"><span style="font-size:11px;color:var(--color-neutral-700)">{{ n.extra }}</span></sc-if></div></td></tr>
+            </sc-for>
+          </tbody>
+        </table>
+        <div style="height:24px"></div>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="position:absolute;left:0;right:0;bottom:0;height:72px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border-top:2px solid var(--color-divider);background:var(--color-bg)">
+    <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
+      <button onClick="{{ t.go }}" style="position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;padding:0 6px 0 8px;border:0;background:transparent;font:inherit;font-size:11px;font-weight:600;color:{{ t.color }};cursor:pointer;min-width:0">
+        <span style="position:absolute;top:-2px;left:0;right:0;height:3px;background:{{ t.bar }}"></span>
+        <span style="display:flex;gap:4px;align-items:flex-start">
+          <sc-if value="{{ t.isTonight }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></sc-if>
+          <sc-if value="{{ t.isForecast }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2"><path d="M3 4h18v18H3zM16 2v4M8 2v4M3 10h18"></path></svg></sc-if>
+          <sc-if value="{{ t.isNap }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg></sc-if>
+          <sc-if value="{{ t.isMorning }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg></sc-if>
+          <sc-if value="{{ t.isWardrobe }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"></path></svg></sc-if>
+          <sc-if value="{{ t.isHistory }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg></sc-if>
+          <sc-if value="{{ t.dot }}"><span style="width:8px;height:8px;background:var(--color-accent)"></span></sc-if>
+        </span>
+        {{ t.l }}
+      </button>
+    </sc-for>
+  </div>
+
+  <sc-if value="{{ toast }}">
+    <div style="position:absolute;left:16px;right:16px;bottom:88px;padding:12px 14px;background:var(--color-text);color:var(--color-bg);font-size:14px;font-weight:600;box-shadow:var(--shadow-md)">{{ toast }}</div>
+  </sc-if>
+
+  <sc-if value="{{ notif }}">
+    <div onClick="{{ openFromNotif }}" style="position:absolute;top:52px;left:8px;right:8px;z-index:8;display:flex;gap:10px;align-items:flex-start;padding:12px 12px 12px 14px;background:var(--color-text);color:var(--color-bg);box-shadow:var(--shadow-lg);cursor:pointer">
+      <div style="flex:1;min-width:0"><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.75">Sleep Outfit · {{ settings.remindAt }}</div><div style="font-size:15px;font-weight:800">How did {{ settings.child }} sleep?</div><div style="font-size:13px">Tap to rate last night and add the morning room reading.</div></div>
+      <button onClick="{{ dismissNotif }}" aria-label="Dismiss" style="width:36px;height:36px;flex:none;border:1px solid color-mix(in srgb,var(--color-bg) 40%,transparent);background:transparent;color:inherit;cursor:pointer;display:flex;align-items:center;justify-content:flex-start;padding-left:9px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ editing }}">
+    <div style="position:absolute;top:44px;left:0;right:0;bottom:0;background:var(--color-bg);display:flex;flex-direction:column;z-index:5">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:2px solid var(--color-divider)">
+        <button class="btn btn-ghost" style="height:44px" onClick="{{ closeEditor }}">Cancel</button>
+        <div style="flex:1;font-weight:800;font-size:16px">{{ editorTitle }}</div>
+        <button class="btn btn-primary" style="height:44px" onClick="{{ saveDraft }}">Save</button>
+      </div>
+      <div class="scr" style="flex:1;overflow-y:auto;scrollbar-width:none;padding:16px 20px 32px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;gap:14px;align-items:flex-end">
+          <label style="width:120px;height:120px;flex:none;background:var(--color-surface);border:1px solid var(--color-divider);display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;padding:10px;gap:4px;cursor:pointer;position:relative;overflow:hidden">
+            <input type="file" accept="image/*" onChange="{{ onPhoto }}" style="position:absolute;opacity:0;width:0;height:0">
+            <sc-if value="{{ draftHasPhoto }}" hint-placeholder-val="{{ false }}"><div class="grayscale" role="img" aria-label="Item photo" style="position:absolute;inset:0;background-size:cover;background-position:center;background-image:{{ draftBgImg }}"></div></sc-if>
+            <sc-if value="{{ draftNoPhoto }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg></sc-if>
+            <sc-if value="{{ draftNoPhoto }}"><span style="font-size:12px;font-weight:600">Add photo</span></sc-if>
+          </label>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--color-neutral-700)">
+            <span>Tap to choose or take a photo.</span>
+            <sc-if value="{{ draftHasPhoto }}"><button class="btn btn-ghost" style="align-self:flex-start" onClick="{{ removePhoto }}">Remove photo</button></sc-if>
+          </div>
+        </div>
+        <div class="field"><label>Name</label><input class="input" style="min-height:44px" placeholder="e.g. Grey stripe sleeping bag" value="{{ draft.name }}" onChange="{{ on.name }}"></div>
+        <div class="field">
+          <label>Type</label>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;background:var(--color-divider);border:1px solid var(--color-divider)">
+            <sc-for list="{{ catOpts }}" as="c" hint-placeholder-count="5">
+              <button onClick="{{ c.pick }}" style="min-height:44px;padding:6px 10px;border:0;background:{{ c.bg }};color:{{ c.fg }};font:inherit;font-size:13px;font-weight:600;text-align:left;cursor:pointer">{{ c.l }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div class="field">
+          <label>TOG rating</label>
+          <input class="input" style="min-height:44px;max-width:120px" type="number" step="0.1" min="0" inputmode="decimal" value="{{ draft.tog }}" onChange="{{ on.tog }}">
+          <div style="font-size:12px;color:var(--color-neutral-700);margin-top:6px;text-wrap:pretty">{{ togHint }}</div>
+        </div>
+        <div class="field"><label>Sleeves</label>
+          <div class="seg"><sc-for list="{{ sleeveOpts }}" as="o" hint-placeholder-count="3"><label class="seg-opt" style="min-height:40px"><input type="radio" name="sleeve" checked="{{ o.active }}" onChange="{{ o.pick }}">{{ o.l }}</label></sc-for></div>
+        </div>
+        <div class="field"><label>Legs</label>
+          <div class="seg"><sc-for list="{{ legOpts }}" as="o" hint-placeholder-count="4"><label class="seg-opt" style="min-height:40px"><input type="radio" name="legs" checked="{{ o.active }}" onChange="{{ o.pick }}">{{ o.l }}</label></sc-for></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+          <div class="field"><label>Fabric</label><input class="input" style="min-height:44px" placeholder="Cotton" value="{{ draft.fabric }}" onChange="{{ on.fabric }}"></div>
+          <div class="field"><label>Size</label><input class="input" style="min-height:44px" placeholder="18–24m" value="{{ draft.size }}" onChange="{{ on.size }}"></div>
+        </div>
+        <div class="field"><label>Web link</label>
+          <input class="input" style="min-height:44px" type="url" placeholder="https://" value="{{ draft.link }}" onChange="{{ on.link }}">
+          <sc-if value="{{ draft.link }}"><a href="{{ draft.link }}" target="_blank" rel="noopener" style="display:inline-flex;gap:4px;align-items:center;font-size:13px;margin-top:6px">Open link<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width:2.5"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a></sc-if>
+        </div>
+        <div class="field"><label>Availability</label>
+          <div class="seg"><sc-for list="{{ availOpts }}" as="o" hint-placeholder-count="2"><label class="seg-opt" style="min-height:40px"><input type="radio" name="avail" checked="{{ o.active }}" onChange="{{ o.pick }}">{{ o.l }}</label></sc-for></div>
+        </div>
+        <div class="field"><label>Notes</label><textarea class="input" style="min-height:64px" placeholder="Runs small, zip on the side…" value="{{ draft.notes }}" onChange="{{ on.notes }}"></textarea></div>
+        <sc-if value="{{ draftErr }}"><div style="font-size:13px;font-weight:600;color:var(--color-accent-700)">{{ draftErr }}</div></sc-if>
+        <sc-if value="{{ draftIsExisting }}"><button class="btn btn-secondary" style="align-self:flex-start;color:var(--color-accent-700)" onClick="{{ deleteDraft }}">Delete item</button></sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ editingNight }}">
+    <div style="position:absolute;top:44px;left:0;right:0;bottom:0;background:var(--color-bg);display:flex;flex-direction:column;z-index:5">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:2px solid var(--color-divider)">
+        <button class="btn btn-ghost" style="height:44px" onClick="{{ closeNight }}">Cancel</button>
+        <div style="flex:1;font-weight:800;font-size:16px">{{ ndTitle }}</div>
+        <button class="btn btn-primary" style="height:44px" onClick="{{ saveNight }}">Save</button>
+      </div>
+      <div class="scr" style="flex:1;overflow-y:auto;scrollbar-width:none;padding:16px 20px 32px;display:flex;flex-direction:column;gap:16px">
+        <h6 style="margin:0">Bedtime</h6>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+          <div class="field"><label>Room temp °C</label><input class="input" type="number" step="0.1" inputmode="decimal" style="min-height:44px" value="{{ nd.room }}" onChange="{{ ndOn.room }}"></div>
+          <div class="field"><label>Humidity %</label><input class="input" type="number" step="1" inputmode="decimal" style="min-height:44px" value="{{ nd.humidity }}" onChange="{{ ndOn.humidity }}"></div>
+          <div class="field"><label>Outside avg °C</label><input class="input" type="number" step="1" inputmode="decimal" style="min-height:44px" value="{{ nd.outdoor }}" onChange="{{ ndOn.outdoor }}"></div>
+          <div class="field"><label>Radiator °C</label><input class="input" type="number" step="0.5" inputmode="decimal" style="min-height:44px" value="{{ nd.thermo }}" onChange="{{ ndOn.thermo }}"></div>
+        </div>
+        <div class="field"><label>Door</label><div class="seg"><sc-for list="{{ ndDoorOpts }}" as="o" hint-placeholder-count="2"><label class="seg-opt" style="min-height:40px"><input type="radio" name="nddoor" checked="{{ o.active }}" onChange="{{ o.pick }}">{{ o.l }}</label></sc-for></div></div>
+        <div style="height:2px;background:var(--color-divider)"></div>
+        <h6 style="margin:0">Morning</h6>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+          <div class="field"><label>Room temp °C</label><input class="input" type="number" step="0.1" inputmode="decimal" style="min-height:44px" value="{{ nd.morningRoom }}" onChange="{{ ndOn.morningRoom }}"></div>
+          <div class="field"><label>Humidity %</label><input class="input" type="number" step="1" inputmode="decimal" style="min-height:44px" value="{{ nd.morningHum }}" onChange="{{ ndOn.morningHum }}"></div>
+        </div>
+        <div style="height:2px;background:var(--color-divider)"></div>
+        <h6 style="margin:0">Outfit worn · {{ ndTog }} TOG</h6>
+        <sc-for list="{{ ndSlots }}" as="sl" hint-placeholder-count="4">
+          <div class="field"><label>{{ sl.label }}</label>
+            <select class="input" style="min-height:44px" value="{{ sl.value }}" onChange="{{ sl.change }}">
+              <sc-for list="{{ sl.opts }}" as="o" hint-placeholder-count="3"><option value="{{ o.id }}">{{ o.l }}</option></sc-for>
+            </select>
+          </div>
+        </sc-for>
+        <div style="height:2px;background:var(--color-divider)"></div>
+        <h6 style="margin:0">Result</h6>
+        <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:2px solid var(--color-divider)"><sc-for list="{{ ndRatingOpts }}" as="o" hint-placeholder-count="5"><button onClick="{{ o.pick }}" style="height:72px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;padding:8px 6px;border:0;border-left:{{ o.edge }};background:{{ o.bg }};color:{{ o.fg }};font:inherit;text-align:left;cursor:pointer"><span style="font-size:18px;font-weight:800;line-height:1">{{ o.sym }}</span><span style="font-size:12px;font-weight:600;line-height:1.15">{{ o.l }}</span></button></sc-for></div>
+        <button class="btn btn-ghost" style="align-self:flex-start;margin-top:-8px" onClick="{{ ndClearRating }}">Mark as not rated</button>
+        <div class="field"><label>Health that night</label><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ ndHealthOpts }}" as="h" hint-placeholder-count="3"><button onClick="{{ h.toggle }}" style="min-height:36px;padding:6px 12px;border:1px solid {{ h.border }};background:{{ h.bg }};color:{{ h.fg }};font:inherit;font-size:13px;font-weight:600;cursor:pointer">{{ h.l }}</button></sc-for></div></div>
+        <div class="field"><label>Signs noticed</label><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ ndSignOpts }}" as="h" hint-placeholder-count="4"><button onClick="{{ h.toggle }}" style="min-height:36px;padding:6px 12px;border:1px solid {{ h.border }};background:{{ h.bg }};color:{{ h.fg }};font:inherit;font-size:13px;cursor:pointer">{{ h.l }}</button></sc-for></div></div>
+        <div class="field"><label>Note</label><textarea class="input" style="min-height:64px" value="{{ nd.note }}" onChange="{{ ndOn.note }}"></textarea></div>
+        <sc-if value="{{ ndErr }}"><div style="font-size:13px;font-weight:600;color:var(--color-accent-700)">{{ ndErr }}</div></sc-if>
+        <button class="btn btn-secondary" style="align-self:flex-start;color:var(--color-accent-700)" onClick="{{ deleteNight }}">Delete this night</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sheet }}">
+    <div style="position:absolute;top:44px;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--color-neutral-900) 50%,transparent);display:flex;flex-direction:column;justify-content:flex-end;z-index:6" onClick="{{ closeSheet }}">
+      <div style="background:var(--color-bg);border-top:2px solid var(--color-text);padding:16px 20px 24px;display:flex;flex-direction:column;gap:14px;max-height:100%;overflow-y:auto" onClick="{{ stop }}">
+        <div style="display:flex;align-items:center"><h3 style="margin:0;flex:1">Settings</h3><button class="btn btn-ghost" style="height:44px" onClick="{{ closeSheet }}">Done</button></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:8px">
+          <div class="field"><label>Child’s name</label><input class="input" style="min-height:44px" value="{{ settings.child }}" onChange="{{ onSet.child }}"></div>
+          <div class="field"><label>Age (months)</label><input class="input" style="min-height:44px" type="number" value="{{ settings.age }}" onChange="{{ onSet.age }}"></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <div class="field" style="flex:1;min-width:0"><label>Postcode</label><input class="input" style="min-height:44px;text-transform:uppercase" placeholder="e.g. SW1A 1AA" value="{{ settings.postcode }}" onChange="{{ onSet.postcode }}"></div>
+          <button class="btn btn-primary" style="height:44px" onClick="{{ lookupPostcode }}">Look up</button>
+        </div>
+        <sc-if value="{{ pcMsg }}"><div style="font-size:12px;margin-top:-6px;color:{{ pcColor }}">{{ pcMsg }}</div></sc-if>
+        <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);gap:8px">
+          <div class="field"><label>Location</label><input class="input" style="min-height:44px" value="{{ settings.city }}" onChange="{{ onSet.city }}"></div>
+          <div class="field"><label>Lat</label><input class="input" style="min-height:44px" value="{{ settings.lat }}" onChange="{{ onSet.lat }}"></div>
+          <div class="field"><label>Lon</label><input class="input" style="min-height:44px" value="{{ settings.lon }}" onChange="{{ onSet.lon }}"></div>
+        </div>
+        <button class="btn btn-secondary" style="align-self:flex-start;height:44px" onClick="{{ fetchWeather }}">Refresh 7pm–7am forecast</button>
+        <div class="field"><label>Morning reminder</label>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div class="seg"><sc-for list="{{ remindOpts }}" as="o" hint-placeholder-count="2"><label class="seg-opt" style="min-height:36px"><input type="radio" name="remind" checked="{{ o.active }}" onChange="{{ o.pick }}">{{ o.l }}</label></sc-for></div>
+            <input class="input" type="time" style="min-height:38px;width:120px" value="{{ settings.remindAt }}" onChange="{{ onSet.remindAt }}">
+          </div>
+          <div style="font-size:12px;color:var(--color-neutral-700);margin-top:6px;text-wrap:pretty">{{ notifStatus }}</div>
+          <button class="btn btn-secondary" style="margin-top:8px;height:40px" onClick="{{ testNotif }}">Send a test reminder</button>
+        </div>
+        <div class="field"><label>Learn from morning feedback</label>
+          <div class="seg"><sc-for list="{{ learnOpts }}" as="o" hint-placeholder-count="2"><label class="seg-opt" style="min-height:40px"><input type="radio" name="learn" checked="{{ o.active }}" onChange="{{ o.pick }}">{{ o.l }}</label></sc-for></div>
+        </div>
+        <button class="btn btn-ghost" style="align-self:flex-start" onClick="{{ resetData }}">Reset to sample data</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+
+<div style="max-width:340px;display:flex;flex-direction:column;gap:14px;padding-top:8px">
+  <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700)">Prototype · how it decides</div>
+  <h2 style="margin:0">Bedtime outfit picker</h2>
+  <div style="display:flex;flex-direction:column;border-top:2px solid var(--color-divider)">
+    <div style="padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:14px;line-height:1.45"><b>1. Overnight room temp.</b> The room drifts toward the average outside temperature between 7pm and 7am (hourly forecast), but the radiator thermostat stops it falling below its setting. Humidity above 65% counts as 0.1–0.2 TOG warmer. Once you add the morning reading, the night’s temp becomes the average of bedtime and morning.</div>
+    <div style="padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:14px;line-height:1.45"><b>2. Guide TOG.</b> A standard room-temp to total-TOG chart (14°C → 3.5, 20°C → 2.0, 26°C → 0.5).</div>
+    <div style="padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:14px;line-height:1.45"><b>3. Personal offset.</b> Each rated night says what would have been right (worn TOG minus 0.3 per step warm). Recent nights count more.</div>
+    <div style="padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:14px;line-height:1.45"><b>Door &amp; health.</b> An open door assumes the room runs 0.3° cooler; once 3+ door-open nights are rated, it learns from those alone. Fever lowers the target 0.5 TOG. Teething, unwell and fever nights count at 20% weight when learning.</div>
+    <div style="padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:14px;line-height:1.45"><b>Naps</b> learn separately once 2 are rated; until then they borrow the night offset.</div>
+    <div style="padding:10px 0;border-bottom:1px solid var(--color-divider);font-size:14px;line-height:1.45"><b>4. Combo search.</b> Every mix of available base layer, sleepwear, bag and socks is scored on distance to target, with sleeve rules below 19°C and above 23°C.</div>
+  </div>
+  <div style="font-size:12px;color:var(--color-neutral-700);line-height:1.5">Sample wardrobe and six nights are pre-loaded. Data saves on this device. The outside figure is the 7pm–7am hourly Met Office forecast (UKV model, served via Open-Meteo) for your postcode (looked up via postcodes.io), or set it by hand. The 7am reminder fires while the app is open; an installed version would push it with the app closed.</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;learningRate&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:0,&quot;max&quot;:2,&quot;step&quot;:0.25,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Model&quot;},&quot;showAlternatives&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Tonight&quot;}}">
+const K='togapp-v1';
+const CATS=[{id:'bag',label:'Sleeping bag',short:'Bag'},{id:'suit',label:'Sleepsuit',short:'Sleepsuit'},{id:'pjs',label:'Pyjamas',short:'PJs'},{id:'body',label:'Bodysuit / vest',short:'Base'},{id:'socks',label:'Socks',short:'Socks'}];
+const SLOT_OF={bag:'bag',suit:'mid',pjs:'mid',body:'base',socks:'socks'};
+const SLOTS=[{id:'base',label:'Base layer'},{id:'mid',label:'Sleepwear'},{id:'bag',label:'Sleeping bag'},{id:'socks',label:'Socks'}];
+const GUIDE=[[14,3.5],[16,3],[18,2.5],[20,2],[22,1.3],[24,0.9],[26,0.5],[28,0.2]];
+const RATINGS=[{v:-2,l:'Too cold',s:'−2'},{v:-1,l:'Bit cool',s:'−1'},{v:0,l:'Just right',s:'0'},{v:1,l:'Bit warm',s:'+1'},{v:2,l:'Too warm',s:'+2'}];
+const HEALTH=['Teething','Unwell','Fever / high temp'];
+const SIGNS=['Woke in the night','Cold hands / chest','Sweaty neck','Flushed cheeks','Kicked about','Slept through'];
+const SLEEVES=[['short','Short'],['long','Long'],['none','None']];
+const LEGS=[['footed','Footed'],['footless','Footless'],['shorts','Shorts'],['na','N/A']];
+const TOG_HINT={bag:'Use the TOG on the bag’s label.',suit:'Estimate if unlabelled: cotton sleepsuit 0.5, fleece 1.0.',pjs:'Estimate if unlabelled: short PJs 0.3, long cotton PJs 0.5.',body:'Estimate: short-sleeve vest 0.2, long-sleeve 0.3.',socks:'Socks add about 0.1.'};
+const r1=n=>Math.round(n*10)/10;
+const f1=n=>r1(n).toFixed(1);
+const sgn=n=>{const v=r1(n);return (v>0?'+':v<0?'−':'±')+Math.abs(v).toFixed(1)};
+function baseTog(t){if(t<=GUIDE[0][0])return GUIDE[0][1];for(let i=1;i<GUIDE.length;i++){const[a,b]=GUIDE[i-1],[c,d]=GUIDE[i];if(t<=c)return b+(d-b)*(t-a)/(c-a);}return GUIDE[GUIDE.length-1][1];}
+function overnight(room,out,thermo,door){const b=Math.min(room,Math.max(thermo-0.5,room-Math.max(0,room-out)*0.12));return r1(door==='open'?b-0.3:b);}
+function learnFrom(list,rate,door){
+  const rated=list.filter(x=>x.rating!=null).sort((a,b)=>b.date.localeCompare(a.date)||String(b.id).localeCompare(String(a.id)));
+  if(!rated.length)return {offset:0,n:0,doorN:0};
+  let pool=rated,doorN=0;
+  if(door){const same=rated.filter(x=>(x.door||'closed')===door);if(same.length>=3&&same.length<rated.length){pool=same;doorN=same.length;}}
+  let sw=0,sr=0;pool.forEach((x,i)=>{const w=Math.pow(0.8,i)*(x.health&&x.health.length?0.2:1);sw+=w;sr+=w*((x.tog-x.rating*0.3)-baseTog(x.actual??x.overnight??x.room));});
+  const conf=pool.length/(pool.length+2);
+  return {offset:r1(sr/sw*conf*rate),n:rated.length,doorN};
+}
+function isoLocal(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function dayLabel(s){return new Date(s+'T12:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});}
+function seed(){
+  const B={sleeve:'none',legs:'na',fabric:'Cotton',size:'18–36m',link:'',photo:'',available:true,notes:''};
+  const items=[
+    {id:'i1',name:'Stars sleeping bag',cat:'bag',tog:0.5,fabric:'Cotton jersey'},
+    {id:'i2',name:'Grey stripe sleeping bag',cat:'bag',tog:1.0},
+    {id:'i3',name:'Merino sleeping bag',cat:'bag',tog:2.5,fabric:'Merino wool'},
+    {id:'i4',name:'Winter sleeping bag',cat:'bag',tog:3.5,fabric:'Cotton, poly fill'},
+    {id:'i5',name:'White short-sleeve bodysuit',cat:'body',tog:0.2,sleeve:'short',size:'2–3y'},
+    {id:'i6',name:'Striped long-sleeve bodysuit',cat:'body',tog:0.3,sleeve:'long',size:'2–3y'},
+    {id:'i7',name:'Navy footed sleepsuit',cat:'suit',tog:0.5,sleeve:'long',legs:'footed',size:'2–3y'},
+    {id:'i8',name:'Fleece sleepsuit',cat:'suit',tog:1.0,sleeve:'long',legs:'footed',fabric:'Polyester fleece',size:'2–3y',available:false},
+    {id:'i9',name:'Dino short pyjamas',cat:'pjs',tog:0.3,sleeve:'short',legs:'shorts',size:'2–3y'},
+    {id:'i10',name:'Rainbow long pyjamas',cat:'pjs',tog:0.5,sleeve:'long',legs:'footless',size:'2–3y'},
+    {id:'i11',name:'Bed socks',cat:'socks',tog:0.1,size:'Toddler 4–7'}
+  ].map(i=>Object.assign({},B,i));
+  const t=new Date();
+  const n=(ago,room,out,thermo,ids,rating)=>{const d=new Date(t);d.setDate(d.getDate()-ago);return {id:'n'+ago+'_'+Date.now(),date:isoLocal(d),room,outdoor:out,thermo,overnight:overnight(room,out,thermo),items:ids,tog:r1(ids.reduce((s,id)=>s+items.find(i=>i.id===id).tog,0)),rating,signs:[],note:''};};
+  const nights=[n(6,21,12,18,['i5','i10','i2'],0),n(5,20,10,18,['i6','i8','i2'],1),n(4,19.5,7,18,['i6','i3'],2),n(3,20,8,18,['i6','i8','i2'],1),n(2,20.5,11,18,['i6','i10','i2'],0),n(1,20,9,18,['i6','i10','i2'],null)];
+  const nap=(ago,room,ids,rating)=>{const d=new Date(t);d.setDate(d.getDate()-ago);return {id:'z'+ago,date:isoLocal(d),start:'12:30',end:'14:30',room,overnight:room,door:'closed',outdoor:13,items:ids,tog:r1(ids.reduce((s,id)=>s+items.find(i=>i.id===id).tog,0)),rating,health:[]};};
+  const naps=[nap(2,21,['i5','i10','i1'],0),nap(1,21.5,['i6','i10','i2'],1)];
+  return {items,nights,naps,settings:{child:'Our toddler',age:27,postcode:'',city:'London',lat:51.51,lon:-0.13,learning:true,remind:true,remindAt:'07:00'},room:20.5,humidity:55,outdoor:9,thermo:18};
+}
+function initState(){
+  let s=null;try{s=JSON.parse(localStorage.getItem(K));}catch(e){}
+  if(!s||!s.items)s=seed();
+  const z=seed();s.settings=Object.assign({},z.settings,s.settings);
+  return {naps:s.naps||z.naps,door:s.door||'closed',health:[],fcNights:[],hourly:null,napStart:s.napStart||'12:30',napEnd:s.napEnd||'14:30',napRoom:s.napRoom??21,napDoor:s.napDoor||'closed',napPick:0,napRating:null,notif:false,nightDraft:null,ndErr:'',tick:0,
+    tab:'tonight',room:s.room,humidity:s.humidity??55,outdoor:s.outdoor,thermo:s.thermo,outdoorAuto:false,outdoorRange:null,pcMsg:'',pcErr:false,weather:'idle',overrides:{},items:s.items,nights:s.nights,settings:s.settings,draft:null,draftErr:'',catFilter:'all',fb:{rating:null,signs:[],note:''},sheet:false,toast:'',learnMsg:''};
+}
+
+class Component extends DCLogic {
+  state = initState();
+  componentDidMount(){this.fetchWeather();this._remKey=this.state.settings.remind+'|'+this.state.settings.remindAt;this.schedule();}
+  componentDidUpdate(pp,ps){const s=this.state;try{localStorage.setItem(K,JSON.stringify({items:s.items,nights:s.nights,naps:s.naps,settings:s.settings,room:s.room,outdoor:s.outdoor,thermo:s.thermo,humidity:s.humidity,door:s.door,napStart:s.napStart,napEnd:s.napEnd,napRoom:s.napRoom,napDoor:s.napDoor}));}catch(e){}
+    const rk=s.settings.remind+'|'+s.settings.remindAt;if(rk!==this._remKey){this._remKey=rk;this.schedule();}}
+  componentWillUnmount(){clearTimeout(this._t);clearTimeout(this._n);}
+  schedule(){
+    clearTimeout(this._n);const st=this.state.settings;if(!st.remind)return;
+    const p=String(st.remindAt||'07:00').split(':');const now=new Date();const at=new Date(now);at.setHours(+p[0]||0,+p[1]||0,0,0);if(at<=now)at.setDate(at.getDate()+1);
+    this._n=setTimeout(()=>{this.fire();this.schedule();},at-now);
+  }
+  fire=()=>{
+    const child=this.state.settings.child||'Our toddler';
+    try{if(typeof Notification!=='undefined'&&Notification.permission==='granted'){const n=new Notification('How did '+child+' sleep?',{body:'Tap to rate last night and add the morning room reading.'});n.onclick=()=>{window.focus();this.setState({tab:'morning',notif:false});};}}catch(e){}
+    this.setState({notif:true});
+  };
+  flash(msg){clearTimeout(this._t);this.setState({toast:msg});this._t=setTimeout(()=>this.setState({toast:''}),2400);}
+  fetchWeather=()=>{
+    const {lat,lon}=this.state.settings;
+    this.setState({weather:'loading'});
+    const url=m=>`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m&forecast_days=5&timezone=auto${m?'&models='+m:''}`;
+    const ok=j=>j&&j.hourly&&j.hourly.temperature_2m&&j.hourly.temperature_2m.some(v=>v!=null);
+    let src='Met Office';
+    fetch(url('ukmo_seamless')).then(r=>r.json()).then(j=>{if(ok(j))return j;src='Open-Meteo';return fetch(url()).then(r=>r.json());})
+      .then(j=>{const T=j.hourly.time,V=j.hourly.temperature_2m;
+        const win=date=>{const i=T.indexOf(date+'T19:00');if(i<0)return null;const w=V.slice(i,i+13).filter(v=>v!=null);if(w.length<6)return null;const avg=w.reduce((a,b)=>a+b,0)/w.length;return {date,avg:Math.round(avg),min:Math.round(Math.min(...w)),max:Math.round(Math.max(...w))};};
+        const t0=win(isoLocal(new Date()));if(!t0)throw 0;
+        const fc=[1,2,3].map(k=>{const d=new Date();d.setDate(d.getDate()+k);return win(isoLocal(d));}).filter(Boolean);
+        this.setState({outdoor:t0.avg,outdoorRange:{min:t0.min,max:t0.max},fcNights:fc,hourly:{time:T,temp:V},outdoorAuto:true,weather:'ok',wxSrc:src});})
+      .catch(()=>this.setState({weather:'fail',outdoorAuto:false}));
+  };
+  lookupPostcode=()=>{
+    const pc=String(this.state.settings.postcode||'').trim().toUpperCase();
+    if(!pc)return this.setState({pcMsg:'Enter a postcode first.',pcErr:true});
+    this.setState({pcMsg:'Looking up…',pcErr:false});
+    fetch('https://api.postcodes.io/postcodes/'+encodeURIComponent(pc)).then(r=>r.json()).then(j=>{
+      if(j.status!==200||!j.result)throw 0;
+      const x=j.result;const city=x.admin_district||x.parish||x.region||pc;
+      this.setState(st=>({settings:Object.assign({},st.settings,{postcode:x.postcode,lat:Math.round(x.latitude*100)/100,lon:Math.round(x.longitude*100)/100,city}),pcMsg:`Found ${x.postcode} · ${city}`,pcErr:false}),this.fetchWeather);
+    }).catch(()=>this.setState({pcMsg:'Postcode not found. Check it, or enter lat/lon by hand.',pcErr:true}));
+  };
+  learn(list,door){
+    if(!this.state.settings.learning)return {offset:0,n:0,doorN:0};
+    return learnFrom(list,this.props.learningRate??1,door);
+  }
+  combos(items,ov,target){
+    const av=items.filter(i=>i.available);
+    const by=s=>av.filter(i=>SLOT_OF[i.cat]===s);
+    const bags=by('bag'),bases=[null,...by('base')],mids=[null,...by('mid')],socks=[null,...by('socks')];
+    const out=[];
+    bags.forEach(bag=>bases.forEach(b=>mids.forEach(m=>socks.forEach(s=>{
+      if(!b&&!m)return;
+      const list=[b,m,bag,s].filter(Boolean);
+      const total=list.reduce((a,i)=>a+i.tog,0);
+      const long=[b,m].some(i=>i&&i.sleeve==='long');
+      let pen=0;
+      if(ov<19&&!long)pen+=0.3;
+      if(ov>23&&long)pen+=0.3;
+      if(s&&ov>=18)pen+=0.2;
+      if(b&&m&&ov>23)pen+=0.15;
+      out.push({slots:{base:b?b.id:null,mid:m?m.id:null,bag:bag.id,socks:s?s.id:null},total,score:Math.abs(total-target)+pen+list.length*0.02});
+    }))));
+    return out.sort((a,b)=>a.score-b.score);
+  }
+  renderVals(){
+    const s=this.state, P=this.props, items=s.items;
+    const byId=id=>items.find(i=>i.id===id);
+    const child=s.settings.child||'Our toddler';
+    const today=isoLocal(new Date());
+    const ov=overnight(s.room,s.outdoor,s.thermo,s.door);
+    const guide=baseTog(ov);
+    const L=this.learn(s.nights,s.door);
+    const humAdj=s.humidity>=75?-0.2:s.humidity>=65?-0.1:0;
+    const hasFever=s.health.includes('Fever / high temp');
+    const feverAdj=hasFever?-0.5:0;
+    const clampT=v=>Math.max(0.2,Math.min(4.5,r1(v)));
+    const target=clampT(guide+L.offset+humAdj+feverAdj);
+    const pName=k=>(s.settings[k]||(k==='p1'?'Parent 1':'Parent 2'));
+    const combos=this.combos(items,ov,target);
+    const best=combos[0];
+    const cur=best?Object.assign({},best.slots,s.overrides):null;
+    const curItems=cur?SLOTS.map(sl=>cur[sl.id]&&byId(cur[sl.id])).filter(Boolean):[];
+    const total=curItems.reduce((a,i)=>a+i.tog,0);
+    const diff=r1(total-target);
+    const av=items.filter(i=>i.available);
+    const cands=slot=>(slot==='bag'?[]:[null]).concat(av.filter(i=>SLOT_OF[i.cat]===slot).sort((a,b)=>a.tog-b.tog).map(i=>i.id));
+    const sleeveTxt={short:'Short sleeve',long:'Long sleeve',none:''};
+    const outfitRows=cur?SLOTS.map(sl=>{const it=cur[sl.id]?byId(cur[sl.id]):null;
+      return {label:sl.label,name:it?it.name:'None',meta:it?[f1(it.tog)+' TOG',sleeveTxt[it.sleeve]].filter(Boolean).join(' · '):'Skip this layer',nameColor:it?'var(--color-text)':'var(--color-neutral-600)',
+        hasPhoto:!!(it&&it.photo),noPhoto:!(it&&it.photo),photo:it?it.photo:'',bgImg:it&&it.photo?'url("'+it.photo+'")':'none',thumbText:it?f1(it.tog):'—',
+        swap:()=>{const c=cands(sl.id);const idx=c.indexOf(cur[sl.id]??null);const next=c[(idx+1)%c.length];this.setState(st=>({overrides:Object.assign({},st.overrides,{[sl.id]:next})}));}};
+    }):[];
+    const longNow=curItems.some(i=>i.sleeve==='long');
+    const reasons=[
+      `Room should settle around ${f1(ov)}°C overnight (${f1(s.room)}° now, ${s.outdoor}° average outside 7pm–7am${s.outdoorAuto&&s.outdoorRange?` (${s.outdoorRange.min}–${s.outdoorRange.max}°)`:''}, radiator at ${f1(s.thermo)}°).`,
+      `The standard guide for ${f1(ov)}°C is ${f1(guide)} TOG in total.`,
+      L.n<2?'Not enough morning feedback yet to adjust the guide.':Math.abs(L.offset)<0.1?`${L.n} rated nights match the guide, so no adjustment.`:`${child} has run ${L.offset<0?'warm':'cool'} across ${L.n} rated nights, so ${sgn(L.offset)} TOG.`,
+      ov<19?`Below 19°C: long sleeves${longNow?' included':' recommended'}.`:ov>23?'Above 23°C: short sleeves, fewer layers.':'Between 19 and 23°C sleeve length is chosen by TOG fit.'
+    ];
+    if(s.door==='open')reasons.splice(1,0,'Door open: the room is expected to run about 0.3° cooler'+(L.doorN?', and learning uses only the '+L.doorN+' rated door-open nights.':'.'));
+    if(hasFever)reasons.push('Fever marked: target lowered by 0.5 TOG.');
+    else if(s.health.length)reasons.push('Marked '+s.health.join(' and ').toLowerCase()+': tomorrow’s rating will count less towards learning.');
+    if(humAdj)reasons.splice(3,0,`Humidity is ${s.humidity}%, which feels warmer: ${sgn(humAdj)} TOG.`);
+    const reasonsV=reasons.map((t,i)=>({n:String(i+1),t}));
+    const alts=combos.slice(1).filter((c,i,arr)=>arr.findIndex(d=>Math.abs(d.total-c.total)<0.05)===i).slice(0,2).map(c=>({total:f1(c.total),names:SLOTS.map(sl=>c.slots[sl.id]&&byId(c.slots[sl.id]).name).filter(Boolean).join(' + '),use:()=>this.setState({overrides:Object.assign({},c.slots)})}));
+    const tonightN=s.nights.find(n=>n.date===today);
+    const curIds=curItems.map(i=>i.id);
+    const sorted=[...s.nights].sort((a,b)=>b.date.localeCompare(a.date));
+    const pending=sorted.find(n=>n.rating==null&&n.date<today);
+    const fbTarget=sorted.find(n=>n.rating==null);
+    const namesOf=n=>n.items.map(id=>byId(id)?byId(id).name:'(deleted item)').join(' + ');
+    const logTonight=()=>{
+      if(!cur)return;
+      const rec={id:'n'+Date.now(),date:today,room:s.room,outdoor:s.outdoor,thermo:s.thermo,overnight:ov,items:curIds,tog:r1(total),target,rating:null,signs:[],note:'',outdoorRange:s.outdoorAuto?s.outdoorRange:null,door:s.door,health:s.health,humidity:s.humidity};
+      this.setState(st=>({nights:st.nights.filter(n=>n.date!==today).concat(rec)}));
+      this.flash('Logged. Sleep well.');
+    };
+    const num=k=>e=>{const v=parseFloat(e.target.value);if(!isNaN(v))this.setState({[k]:k==='room'?r1(v):v});};
+    const fbNum=k=>e=>{const v=parseFloat(e.target.value);if(!isNaN(v))this.setState(st=>({fb:Object.assign({},st.fb,{[k]:v})}));};
+    const fbStep=(k,d,dflt)=>()=>this.setState(st=>({fb:Object.assign({},st.fb,{[k]:r1((st.fb[k]??dflt)+d)})}));
+    const step=(k,d,lo,hi)=>()=>this.setState(st=>({[k]:Math.max(lo,Math.min(hi,r1(st[k]+d))),...(k==='outdoor'?{outdoorAuto:false}:{})}));
+    const rTone=v=>v==null?['var(--color-neutral-200)','var(--color-neutral-800)']:v<0?['var(--color-neutral-200)','var(--color-neutral-900)']:v===0?['var(--color-text)','var(--color-bg)']:['var(--color-accent-100)','var(--color-accent-800)'];
+    const rLabel=v=>v==null?'Not rated':RATINGS.find(r=>r.v===v).l;
+    const fb=s.fb;
+    const fbHealth=fb.health??(fbTarget&&fbTarget.health)??[];
+    const chipOf=(l,a,toggle)=>({l,bg:a?'var(--color-text)':'transparent',fg:a?'var(--color-bg)':'var(--color-text)',border:a?'var(--color-text)':'var(--color-divider)',toggle});
+    const rate=P.learningRate??1;
+    // forecast
+    const namesOfSlots=c=>SLOTS.map(sl=>c.slots[sl.id]&&byId(c.slots[sl.id])).filter(Boolean).map(i=>i.name);
+    const allAvail=items.map(i=>Object.assign({},i,{available:true}));
+    const fcRows=(s.fcNights||[]).map(fn=>{
+      const fov=overnight(s.room,fn.avg,s.thermo,s.door);const ftg=clampT(baseTog(fov)+L.offset);
+      const c=this.combos(items,fov,ftg)[0];const ca=this.combos(allAvail,fov,ftg)[0];
+      const wash=(ca&&(!c||ca.score<c.score-0.1))?SLOTS.map(sl=>ca.slots[sl.id]).filter(id=>id&&!byId(id).available).map(id=>byId(id).name):[];
+      return {label:dayLabel(fn.date),outside:fn.avg+'° avg · '+fn.min+'–'+fn.max+'°',room:f1(fov)+'°',tog:c?f1(c.total):'—',names:(c?namesOfSlots(c):['No sleeping bag available']).map(n=>({n})),
+        hasWash:wash.length>0,washText:wash.length?'Wash the '+wash.join(' and ')+' — it suits this night better ('+f1(ca.total)+' TOG).':''};
+    });
+    // nap
+    const hr=s.hourly;
+    const napVals=(()=>{if(!hr)return null;const sh=parseInt(s.napStart,10),em=String(s.napEnd).split(':');const eh=Math.max(sh+1,(+em[0])+((+em[1])>0?1:0));const v=[];for(let h=sh;h<eh;h++){const i=hr.time.indexOf(today+'T'+String(h).padStart(2,'0')+':00');if(i>=0&&hr.temp[i]!=null)v.push(hr.temp[i]);}return v.length?v:null;})();
+    const napOut=napVals?Math.round(napVals.reduce((a,b)=>a+b,0)/napVals.length):null;
+    const napEff=r1(s.napRoom-(s.napDoor==='open'?0.2:0));
+    const NL=s.settings.learning?learnFrom(s.naps,rate,null):{offset:0,n:0};
+    const napOff=NL.n>=2?NL.offset:L.offset;
+    const napTarget=clampT(baseTog(napEff)+napOff+feverAdj);
+    const napC=this.combos(items,napEff,napTarget).filter((c,i,arr)=>arr.findIndex(d=>Math.abs(d.total-c.total)<0.05)===i).slice(0,3);
+    const napPick=Math.min(s.napPick,Math.max(0,napC.length-1));
+    const napSel=napC[napPick];
+    const napOpen=[...s.naps].reverse().find(n=>n.date===today&&n.rating==null);
+    const rateOpts=(cur,set)=>RATINGS.map((r,i)=>{const a=cur===r.v;return {l:r.l,sym:r.s,edge:i?'2px solid var(--color-divider)':'0',bg:a?(r.v>0?'var(--color-accent)':'var(--color-text)'):'var(--color-bg)',fg:a?'var(--color-bg)':'var(--color-text)',pick:()=>set(r.v)};});
+    // night editor
+    const nd=s.nightDraft;
+    const ndSet=(k,v)=>this.setState(st=>({nightDraft:Object.assign({},st.nightDraft,{[k]:v})}));
+    const ndOn={};['room','humidity','outdoor','thermo','morningRoom','morningHum','note'].forEach(k=>ndOn[k]=e=>ndSet(k,e.target.value));
+    const openNight=n=>{const str=v=>v==null?'':String(v);const sl={base:'',mid:'',bag:'',socks:''};(n.items||[]).forEach(id=>{const it=byId(id);if(it)sl[SLOT_OF[it.cat]]=id;});
+      this.setState({nightDraft:{id:n.id,date:n.date,room:str(n.room),humidity:str(n.humidity),outdoor:str(n.outdoor),thermo:str(n.thermo),morningRoom:str(n.morningRoom),morningHum:str(n.morningHum),door:n.door||'closed',slots:sl,rating:n.rating??null,health:n.health||[],signs:n.signs||[],note:n.note||''},ndErr:''});};
+    const ndItems=nd?SLOTS.map(sl=>nd.slots[sl.id]).filter(Boolean).map(byId).filter(Boolean):[];
+    const ndSlots=nd?SLOTS.map(sl=>({label:sl.label,value:nd.slots[sl.id]||'',change:e=>{const v=e.target.value;this.setState(st=>({nightDraft:Object.assign({},st.nightDraft,{slots:Object.assign({},st.nightDraft.slots,{[sl.id]:v})})}));},
+      opts:[{id:'',l:sl.id==='bag'?'— Choose a bag —':'None'}].concat(items.filter(i=>SLOT_OF[i.cat]===sl.id).sort((a,b)=>a.tog-b.tog).map(i=>({id:i.id,l:i.name+' · '+f1(i.tog)+' TOG'})))})):[];
+    const ndTogg=(k,l)=>{const a=nd&&nd[k].includes(l);return chipOf(l,a,()=>ndSet(k,a?nd[k].filter(x=>x!==l):nd[k].concat(l)));};
+    const saveNight=()=>{
+      const p=v=>v===''||v==null?null:parseFloat(v);
+      const room=p(nd.room),outdoor=p(nd.outdoor),thermo=p(nd.thermo),mr=p(nd.morningRoom),hum=p(nd.humidity),mh=p(nd.morningHum);
+      if(room==null||isNaN(room)||outdoor==null||isNaN(outdoor)||thermo==null||isNaN(thermo))return this.setState({ndErr:'Bedtime room, outside and radiator need numbers.'});
+      if(!nd.slots.bag)return this.setState({ndErr:'Choose the sleeping bag worn.'});
+      const ids=SLOTS.map(sl=>nd.slots[sl.id]).filter(Boolean);
+      const tog=r1(ids.reduce((a,id)=>a+(byId(id)?byId(id).tog:0),0));
+      const ovn=overnight(room,outdoor,thermo,nd.door);
+      const upd={room:r1(room),outdoor,thermo,humidity:hum,morningRoom:mr==null||isNaN(mr)?null:r1(mr),morningHum:mh==null||isNaN(mh)?null:mh,door:nd.door,items:ids,tog,overnight:ovn,rating:nd.rating,health:nd.health,signs:nd.signs,note:nd.note};
+      upd.actual=upd.morningRoom==null?undefined:r1((upd.room+upd.morningRoom)/2+(nd.door==='open'?-0.3:0));
+      this.setState(st=>({nights:st.nights.map(n=>n.id===nd.id?Object.assign({},n,upd):n),nightDraft:null}));this.flash('Night updated');
+    };
+    const notifPerm=typeof Notification==='undefined'?'none':Notification.permission;
+    const saveFb=()=>{
+      if(!fbTarget||fb.rating==null)return;
+      const before=L.offset;const mRoom=fb.mRoom??s.room,mHum=fb.mHum??s.humidity;
+      const nights=s.nights.map(n=>n.id===fbTarget.id?Object.assign({},n,{rating:fb.rating,signs:fb.signs,note:fb.note,morningRoom:mRoom,morningHum:mHum,health:fbHealth,actual:r1((n.room+mRoom)/2+(n.door==='open'?-0.3:0))}):n);
+      const after=this.learn(nights,s.door).offset;
+      const dir=after<before?'cooler':after>before?'warmer':'unchanged';
+      this.setState({nights,fb:{rating:null,signs:[],note:''},notif:false,learnMsg:`Saved ${dayLabel(fbTarget.date)}. Future picks are now ${dir==='unchanged'?'unchanged':'a little '+dir} — ${sgn(after)} TOG vs the guide (was ${sgn(before)}).`});
+    };
+    // wardrobe
+    const filters=[{id:'all',l:'All'}].concat(CATS.map(c=>({id:c.id,l:c.short}))).map(f=>{const a=s.catFilter===f.id;return {l:f.l,bg:a?'var(--color-text)':'transparent',fg:a?'var(--color-bg)':'var(--color-text)',border:a?'var(--color-text)':'var(--color-divider)',pick:()=>this.setState({catFilter:f.id})};});
+    const catOrder=CATS.map(c=>c.id);
+    const itemCards=items.filter(i=>s.catFilter==='all'||i.cat===s.catFilter).sort((a,b)=>catOrder.indexOf(a.cat)-catOrder.indexOf(b.cat)||a.tog-b.tog).map(i=>({
+      name:i.name,photo:i.photo,bgImg:i.photo?'url("'+i.photo+'")':'none',hasPhoto:!!i.photo,noPhoto:!i.photo,catShort:CATS.find(c=>c.id===i.cat).label,togNum:f1(i.tog),inWash:!i.available,opacity:i.available?'1':'0.6',
+      meta:[f1(i.tog)+' TOG',sleeveTxt[i.sleeve],i.size].filter(Boolean).join(' · '),
+      open:()=>this.setState({draft:Object.assign({},i,{tog:String(i.tog)}),draftErr:''})}));
+    // editor
+    const d=s.draft;
+    const setD=(k,v)=>this.setState(st=>({draft:Object.assign({},st.draft,{[k]:v})}));
+    const on={};['name','tog','fabric','size','link','notes'].forEach(k=>on[k]=e=>setD(k,e.target.value));
+    const opt=(list,key)=>list.map(([v,l])=>({l,active:!!d&&d[key]===v,pick:()=>setD(key,v)}));
+    const onSet={};['child','age','postcode','city','lat','lon','remindAt'].forEach(k=>onSet[k]=e=>{const v=e.target.value;this.setState(st=>({settings:Object.assign({},st.settings,{[k]:(k==='lat'||k==='lon'||k==='age')&&v!==''&&!isNaN(+v)?+v:v})}));});
+    // history chart
+    const X=t=>36+(Math.max(14,Math.min(26,t))-14)/12*304, Y=v=>172-(Math.max(0,Math.min(4,v))/4)*160;
+    const pts=[];for(let t=14;t<=26;t+=0.5)pts.push(t);
+    const rated=sorted.filter(n=>n.rating!=null);
+    const tabsDef=[['tonight','Tonight'],['forecast','Forecast'],['nap','Nap'],['morning','Morning'],['wardrobe','Wardrobe'],['history','History']];
+    return {
+      settings:Object.assign({},s.settings,{child}),
+      isForecast:s.tab==='forecast',isNap:s.tab==='nap',
+      doorOpts:[['closed','Closed'],['open','Open']].map(([v,l])=>({l,active:s.door===v,pick:()=>this.setState({door:v})})),
+      healthOpts:HEALTH.map(l=>{const a=s.health.includes(l);return chipOf(l,a,()=>this.setState(st=>({health:a?st.health.filter(x=>x!==l):st.health.concat(l)})));}),
+      hasFever,
+      fbHealthOpts:HEALTH.map(l=>{const a=fbHealth.includes(l);return chipOf(l,a,()=>this.setState(st=>({fb:Object.assign({},st.fb,{health:a?fbHealth.filter(x=>x!==l):fbHealth.concat(l)})})));}),
+      fcRows,noFc:!fcRows.length,
+      napKicker:NL.n+' naps rated'+(NL.n<2?' · using night learning':''),
+      napStart:s.napStart,napEnd:s.napEnd,setNapStart:e=>this.setState({napStart:e.target.value||'12:30'}),setNapEnd:e=>this.setState({napEnd:e.target.value||'14:30'}),
+      napRoom:s.napRoom,setNapRoom:num('napRoom'),napRoomDown:step('napRoom',-0.1,10,32),napRoomUp:step('napRoom',0.1,10,32),
+      napOutLabel:napOut==null?'—':napOut+'°',napOutSrc:napOut==null?'No forecast for this time':(s.wxSrc||'Forecast')+' · '+s.napStart+'–'+s.napEnd,
+      napDoorOpts:[['closed','Closed'],['open','Open']].map(([v,l])=>({l,active:s.napDoor===v,pick:()=>this.setState({napDoor:v})})),
+      napTargetLabel:f1(napTarget),
+      napOffNote:'Guide for '+f1(napEff)+'°C is '+f1(baseTog(napEff))+' TOG. '+(NL.n>=2?'Nap learning '+sgn(NL.offset)+' TOG from '+NL.n+' naps.':'Using night learning ('+sgn(L.offset)+' TOG) until 2 naps are rated.')+(hasFever?' Fever −0.5.':''),
+      napOpts:napC.map((c,i)=>({tog:f1(c.total),names:namesOfSlots(c).join(' + '),best:i===0,border:i===napPick?'2px solid var(--color-text)':'2px solid var(--color-neutral-300)',bg:i===napPick?'var(--color-surface)':'var(--color-bg)',togColor:i===napPick?'var(--color-accent)':'var(--color-text)',pick:()=>this.setState({napPick:i})})),
+      napCanLog:!napOpen&&!!napSel,napNeedsRating:!!napOpen,
+      logNap:()=>{if(!napSel)return;const ids=SLOTS.map(sl=>napSel.slots[sl.id]).filter(Boolean);this.setState(st=>({naps:st.naps.concat({id:'z'+Date.now(),date:today,start:s.napStart,end:s.napEnd,room:s.napRoom,overnight:napEff,door:s.napDoor,outdoor:napOut,items:ids,tog:r1(napSel.total),rating:null,health:s.health}),napRating:null}));this.flash('Nap logged. Rate it when they wake.');},
+      napRatingOpts:rateOpts(s.napRating,v=>this.setState({napRating:v})),napRateDisabled:s.napRating==null,
+      saveNapRating:()=>{if(!napOpen||s.napRating==null)return;this.setState(st=>({naps:st.naps.map(n=>n.id===napOpen.id?Object.assign({},n,{rating:st.napRating}):n),napRating:null}));this.flash('Nap saved');},
+      hasNapRows:s.naps.length>0,
+      napRows:[...s.naps].sort((a,b)=>b.date.localeCompare(a.date)||String(b.id).localeCompare(String(a.id))).slice(0,6).map(n=>{const [bg,fg]=rTone(n.rating);return {label:dayLabel(n.date).replace(/^\w+ /,'')+' · '+n.start,room:f1(n.room)+'°',tog:f1(n.tog),rl:rLabel(n.rating),bg,fg};}),
+      notif:s.notif,openFromNotif:()=>this.setState({notif:false,tab:'morning'}),dismissNotif:e=>{e.stopPropagation();this.setState({notif:false});},
+      testNotif:()=>{this.setState({sheet:false});setTimeout(this.fire,400);},
+      remindOpts:[[true,'On'],[false,'Off']].map(([v,l])=>({l,active:!!s.settings.remind===v,pick:()=>{this.setState(st=>({settings:Object.assign({},st.settings,{remind:v})}));if(v&&notifPerm==='default'){try{Notification.requestPermission().then(()=>this.forceUpdate());}catch(e){}}}})),
+      notifStatus:!s.settings.remind?'Off.':notifPerm==='granted'?'Daily at '+(s.settings.remindAt||'07:00')+'. Shows as a phone notification while the app is open.':notifPerm==='denied'?'Notifications are blocked in this browser, so the reminder only shows inside the app.':notifPerm==='none'?'This browser can’t show system notifications; the reminder shows inside the app.':'Allow notifications when asked to get it on your lock screen.',
+      isTonight:s.tab==='tonight',isMorning:s.tab==='morning',isWardrobe:s.tab==='wardrobe',isHistory:s.tab==='history',
+      todayLabel:new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'}),
+      openSheet:()=>this.setState({sheet:true}),closeSheet:()=>this.setState({sheet:false}),stop:e=>e.stopPropagation(),
+      hasPending:!!pending,pendingLabel:pending?(pending.date===isoLocal(new Date(Date.now()-864e5))?'last night':dayLabel(pending.date)):'',
+      goMorning:()=>this.setState({tab:'morning',learnMsg:''}),goTonight:()=>this.setState({tab:'tonight'}),goWardrobe:()=>this.setState({tab:'wardrobe'}),
+      roomLabel:f1(s.room)+'°',humLabel:s.humidity+'%',humDown:step('humidity',-5,20,95),humUp:step('humidity',5,20,95),
+      ageLabel:(()=>{const a=+s.settings.age||0;return a<24?a+'m':Math.floor(a/12)+'y '+(a%12)+'m';})(),
+      room:s.room,thermo:s.thermo,humidity:s.humidity,
+      setRoom:num('room'),setThermo:num('thermo'),setHum:num('humidity'),selectAll:e=>e.target.select(),
+      fbRoom:fb.mRoom??s.room,fbHum:fb.mHum??s.humidity,setFbRoom:fbNum('mRoom'),setFbHum:fbNum('mHum'),
+      fbRoomDown:fbStep('mRoom',-0.1,s.room),fbRoomUp:fbStep('mRoom',0.1,s.room),fbHumDown:fbStep('mHum',-5,s.humidity),fbHumUp:fbStep('mHum',5,s.humidity),outdoorLabel:s.outdoor+'°',thermoLabel:f1(s.thermo)+'°',
+      outdoorSrc:s.weather==='loading'?'Fetching…':s.outdoorAuto&&s.outdoorRange?`${s.wxSrc||''} · ${s.outdoorRange.min}–${s.outdoorRange.max}°`:s.outdoorAuto?'Live forecast':s.weather==='fail'?'Manual · offline':'Manual',
+      outdoorSrcColor:s.outdoorAuto?'var(--color-accent-700)':'var(--color-neutral-700)',
+      roomDown:step('room',-0.1,10,32),roomUp:step('room',0.1,10,32),outDown:step('outdoor',-1,-25,40),outUp:step('outdoor',1,-25,40),thermoDown:step('thermo',-0.5,5,30),thermoUp:step('thermo',0.5,5,30),
+      overnightLabel:f1(ov)+'°C',targetLabel:f1(target),
+      noBags:!best,hasOutfit:!!best,totalLabel:f1(total),
+      diffLabel:Math.abs(diff)<=0.25?'On target':`${f1(Math.abs(diff))} ${diff>0?'over':'under'}`,
+      diffBg:Math.abs(diff)<=0.25?'var(--color-neutral-200)':'var(--color-accent-100)',diffFg:Math.abs(diff)<=0.25?'var(--color-neutral-800)':'var(--color-accent-800)',
+      outfitRows,edited:Object.keys(s.overrides).length>0,resetOverrides:()=>this.setState({overrides:{}}),
+      notLogged:!tonightN,isLogged:!!tonightN,loggedTog:tonightN?f1(tonightN.tog):'',logDiffers:!!tonightN&&tonightN.items.join()!==curIds.join(),logTonight,
+      reasons:reasonsV,showAlts:(P.showAlternatives??true)&&alts.length>0,alts,
+      fbKicker:fbTarget?dayLabel(fbTarget.date):'Up to date',hasFb:!!fbTarget,noFb:!fbTarget,learnMsg:s.learnMsg,
+      fbN:fbTarget?{overnight:f1(fbTarget.overnight)+'°',outdoor:fbTarget.outdoor+'°',tog:f1(fbTarget.tog),names:namesOf(fbTarget)}:{},
+      ratingOpts:RATINGS.map((r,i)=>{const a=fb.rating===r.v;return {l:r.l,sym:r.s,edge:i?'2px solid var(--color-divider)':'0',bg:a?(r.v>0?'var(--color-accent)':'var(--color-text)'):'var(--color-bg)',fg:a?'var(--color-bg)':'var(--color-text)',pick:()=>this.setState(st=>({fb:Object.assign({},st.fb,{rating:r.v}),learnMsg:''}))};}),
+      signOpts:SIGNS.map(l=>{const a=fb.signs.includes(l);return {l,bg:a?'var(--color-text)':'transparent',fg:a?'var(--color-bg)':'var(--color-text)',border:a?'var(--color-text)':'var(--color-divider)',toggle:()=>this.setState(st=>({fb:Object.assign({},st.fb,{signs:a?st.fb.signs.filter(x=>x!==l):st.fb.signs.concat(l)})}))};}),
+      fb,onFbNote:e=>{const v=e.target.value;this.setState(st=>({fb:Object.assign({},st.fb,{note:v})}));},fbDisabled:fb.rating==null,saveFb,
+      wardrobeKicker:`${items.length} items · ${items.filter(i=>!i.available).length} in the wash`,filters,itemCards,
+      newItem:()=>this.setState({draft:{id:null,name:'',cat:s.catFilter!=='all'?s.catFilter:'bag',tog:'1.0',sleeve:'none',legs:'na',fabric:'',size:'',link:'',photo:'',available:true,notes:''},draftErr:''}),
+      editing:!!d,draft:d||{},draftErr:s.draftErr,editorTitle:d&&d.id?'Edit item':'New item',draftIsExisting:!!(d&&d.id),
+      draftHasPhoto:!!(d&&d.photo),draftBgImg:d&&d.photo?'url("'+d.photo+'")':'none',draftNoPhoto:!(d&&d.photo),on,togHint:d?TOG_HINT[d.cat]:'',
+      catOpts:CATS.map(c=>{const a=!!d&&d.cat===c.id;return {l:c.label,bg:a?'var(--color-accent)':'var(--color-bg)',fg:a?'var(--color-bg)':'var(--color-text)',pick:()=>setD('cat',c.id)};}),
+      sleeveOpts:opt(SLEEVES,'sleeve'),legOpts:opt(LEGS,'legs'),
+      availOpts:[[true,'In the wardrobe'],[false,'In the wash']].map(([v,l])=>({l,active:!!d&&d.available===v,pick:()=>setD('available',v)})),
+      onPhoto:e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const img=new Image();img.onload=()=>{const k=Math.min(1,480/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);setD('photo',c.toDataURL('image/jpeg',0.82));};img.src=rd.result;};rd.readAsDataURL(f);},
+      removePhoto:e=>{e.preventDefault();setD('photo','');},
+      closeEditor:()=>this.setState({draft:null}),
+      saveDraft:()=>{const tg=parseFloat(d.tog);if(!d.name.trim())return this.setState({draftErr:'Give the item a name.'});if(isNaN(tg)||tg<0||tg>5)return this.setState({draftErr:'TOG should be a number between 0 and 5.'});
+        const it=Object.assign({},d,{name:d.name.trim(),tog:r1(tg),id:d.id||'i'+Date.now()});
+        this.setState(st=>({items:d.id?st.items.map(x=>x.id===d.id?it:x):st.items.concat(it),draft:null,overrides:{}}));this.flash(d.id?'Item updated':'Added to wardrobe');},
+      deleteDraft:()=>{this.setState(st=>({items:st.items.filter(x=>x.id!==d.id),draft:null,overrides:{}}));this.flash('Item deleted');},
+      sheet:s.sheet,onSet,fetchWeather:this.fetchWeather,lookupPostcode:this.lookupPostcode,pcMsg:s.pcMsg,pcColor:s.pcErr?'var(--color-accent-700)':'var(--color-neutral-700)',
+      learnOpts:[[true,'On'],[false,'Off — use guide only']].map(([v,l])=>({l,active:s.settings.learning===v,pick:()=>this.setState(st=>({settings:Object.assign({},st.settings,{learning:v})}))})),
+      resetData:()=>{const z=seed();this.setState({items:z.items,nights:z.nights,naps:z.naps,door:'closed',health:[],settings:z.settings,room:z.room,thermo:z.thermo,humidity:z.humidity,overrides:{},sheet:false,learnMsg:''});this.fetchWeather();this.flash('Sample data restored');},
+      ratedCount:String(L.n),offsetLabel:sgn(L.offset),
+      insight:L.n<2?`Rate a few more mornings and this will show whether ${child} runs warm or cool.`:Math.abs(L.offset)<0.1?`${child} sleeps comfortably at the standard guide. No adjustment applied.`:`${child} tends to run ${L.offset<0?'warm':'cool'}, so tonight’s target is ${Math.abs(L.offset).toFixed(1)} TOG ${L.offset<0?'below':'above'} the standard chart.`,
+      yTicks:[0,1,2,3,4].map(v=>({y:Y(v),ty:Y(v)+3,l:String(v)})),
+      xTicks:[14,16,18,20,22,24,26].map(t=>({x:X(t)-8,l:t+'°'})),
+      guidePts:pts.map(t=>X(t)+','+Y(baseTog(t))).join(' '),
+      personalPts:pts.map(t=>X(t)+','+Y(baseTog(t)+L.offset)).join(' '),
+      dots:rated.map(n=>({x:X(n.actual??n.overnight)-5,y:Y(n.tog)-5,fill:n.rating<0?'var(--color-bg)':n.rating===0?'var(--color-text)':'var(--color-accent)',stroke:n.rating>0?'var(--color-accent)':'var(--color-text)'})),
+      editingNight:!!nd,nd:nd||{},ndOn,ndErr:s.ndErr,ndTitle:nd?dayLabel(nd.date):'',ndTog:f1(ndItems.reduce((a,i)=>a+i.tog,0)),ndSlots,
+      ndDoorOpts:[['closed','Closed'],['open','Open']].map(([v,l])=>({l,active:!!nd&&nd.door===v,pick:()=>ndSet('door',v)})),
+      ndRatingOpts:rateOpts(nd?nd.rating:null,v=>ndSet('rating',v)),ndClearRating:()=>ndSet('rating',null),
+      ndHealthOpts:HEALTH.map(l=>ndTogg('health',l)),ndSignOpts:SIGNS.map(l=>ndTogg('signs',l)),
+      closeNight:()=>this.setState({nightDraft:null}),saveNight,
+      deleteNight:()=>{if(!window.confirm('Delete this night? It will no longer count towards learning.'))return;this.setState(st=>({nights:st.nights.filter(n=>n.id!==nd.id),nightDraft:null}));this.flash('Night deleted');},
+      nightRows:sorted.map(n=>{const [bg,fg]=rTone(n.rating);return {open:()=>openNight(n),label:dayLabel(n.date),overnight:f1(n.actual??n.overnight)+'°',tog:f1(n.tog),rl:rLabel(n.rating),bg,fg,extra:[n.door==='open'?'Door open':'',...(n.health||[])].filter(Boolean).join(' · ')};}),
+      tabs:tabsDef.map(([id,l])=>{const a=s.tab===id;return {l,color:a?'var(--color-accent)':'var(--color-text)',bar:a?'var(--color-accent)':'transparent',isTonight:id==='tonight',isForecast:id==='forecast',isNap:id==='nap',isMorning:id==='morning',isWardrobe:id==='wardrobe',isHistory:id==='history',dot:id==='morning'&&!!fbTarget&&!a,go:()=>this.setState({tab:id,learnMsg:id==='morning'?s.learnMsg:''})};}),
+      toast:s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

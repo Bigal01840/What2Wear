@@ -1,0 +1,44 @@
+/* App shell and the few repeated patterns from the prototype's inline styles. */
+html, body { height: 100%; }
+body { margin: 0; background: var(--color-neutral-300); -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+a { color: var(--color-accent-700); }
+a:hover { color: var(--color-accent-800); }
+.scr::-webkit-scrollbar { display: none; }
+.scr { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+button { touch-action: manipulation; }
+
+/* Mobile layout at a 390px design width, fluid from 360 to 430px. */
+.app {
+  position: fixed; inset: 0; margin: 0 auto; max-width: 430px;
+  background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); overflow: hidden;
+}
+@media (min-width: 480px) {
+  .app { border-left: 2px solid var(--color-text); border-right: 2px solid var(--color-text); box-shadow: var(--shadow-lg); }
+}
+.frame { position: absolute; left: 0; right: 0; bottom: 0; top: env(safe-area-inset-top, 0px); }
+.statusbar {
+  height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 20px;
+  font-size: 14px; font-weight: 600; border-bottom: 1px solid var(--color-neutral-300);
+}
+.scr-main { position: absolute; top: 44px; left: 0; right: 0; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; }
+.tabbar {
+  position: absolute; left: 0; right: 0; bottom: 0; height: calc(72px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+  border-top: 2px solid var(--color-divider); background: var(--color-bg);
+}
+.overlay-scroll { padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)) !important; }
+
+.kicker { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-accent-700); }
+.lbl { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); }
+
+.num-big {
+  width: 86px; padding: 0; border: 0; border-bottom: 2px solid var(--color-neutral-300); border-radius: 0;
+  background: transparent; font: inherit; font-size: 30px; font-weight: 800; line-height: 1.1; color: inherit;
+}
+.num-big:focus { border-bottom-color: var(--color-accent); outline: none; }
+
+.row-btn:hover { background: var(--color-surface) !important; }
+.hover-surface:hover { background: var(--color-surface) !important; }
