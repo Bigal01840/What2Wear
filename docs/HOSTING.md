@@ -1,11 +1,56 @@
 # Hosting
 
-Two options:
+Three options:
 
-- **A. A Raspberry Pi or home machine, reached only over Tailscale.** Recommended. Nothing is exposed to the internet.
-- **B. Fly.io with a persistent volume.** Use this if you'd rather not keep a machine running at home.
+- **Single phone, no server.** The simplest option. One phone holds all the data, and the app is just static files on a free host.
+- **A. A Raspberry Pi or home machine, reached only over Tailscale.** For both phones sharing data, with 7am push notifications. Nothing is exposed to the internet.
+- **B. Fly.io with a persistent volume.** Same as A, if you'd rather not keep a machine running at home.
 
-Either way the app is a single Node process. It serves the PWA and the API, stores everything in `data/sleep-outfit.db`, and keeps photos in `data/photos/`.
+A and B run a single Node process. It serves the PWA and the API, stores everything in `data/sleep-outfit.db`, and keeps photos in `data/photos/`.
+
+---
+
+## Single phone, no server (local mode)
+
+`npm run build:local` builds the same app with no server at all:
+
+- **Data lives on the phone,** in the app's own storage (IndexedDB). That covers the wardrobe, photos (shrunk to 480px), every night, nap and morning rating, and settings. Everything the model has learned is recalculated from those rated nights, so keeping the data keeps the learning.
+- **Weather and postcode lookups** go straight from the phone to Open-Meteo and postcodes.io, as in the prototype.
+- **There's no login,** because the hosted files contain no data. Anyone who opens the URL gets an empty app on their own device.
+- **The reminder** shows as the in-app banner, plus a phone notification if allowed, but only while the app is open. There's no push when it's closed (see *Daily reminder* below).
+- **Settings, then Backup,** has **Export data** and **Import data**. Export saves a single `.json` file containing everything, photos included. On iPhone it opens the share sheet: choose **Save to Files**, then pick iCloud Drive. Import replaces everything on the phone with a backup, after asking first.
+
+> **Back up regularly.** If the app is deleted, website data is cleared, or the phone is lost or replaced, the only copy of your history is your latest export. To move to a new phone, install the app there and use **Import data**.
+
+### Host it free on Cloudflare Pages (auto-deploys from GitHub)
+
+1. Create a free account at <https://dash.cloudflare.com>.
+2. Go to **Workers & Pages**, then **Create**, then **Pages**, then **Connect to Git**, and pick `Bigal01840/What2Wear`.
+3. Use these build settings:
+   - Production branch: the branch you deploy from
+   - Build command: `npm run build:local`
+   - Build output directory: `dist/local`
+   - Environment variable: `NODE_VERSION` = `22`
+4. Click **Save and Deploy**. You get a URL like `https://sleep-outfit.pages.dev`.
+
+**No GitHub connection?** Build on your computer with `npm run build:local`, then either:
+- run `npx wrangler pages deploy dist/local --project-name sleep-outfit`, or
+- drag the `dist/local` folder onto <https://app.netlify.com/drop>.
+
+The build writes `_redirects` and `_headers` so that `/morning` and the other routes work on both Cloudflare and Netlify.
+
+### Install (one phone)
+
+- **iPhone:** open the URL in **Safari**, then tap **Share**, then **Add to Home Screen**. From then on, **only use the Home Screen icon**. The Safari tab and the Home Screen app keep separate storage, so data entered in one won't appear in the other.
+- **Android:** open it in **Chrome**, then tap **⋮**, then **Install app**.
+
+### Daily reminder
+
+Local mode can't send a notification while the app is closed. Set a repeating phone reminder instead. For example, on iPhone, Reminders: "Rate last night in Sleep Outfit", daily at 07:00. When you open the app, the red "How was last night?" banner and the dot on the Morning tab take you straight to the rating.
+
+### Moving to the server version later
+
+The server version (A or B) keeps its data on the server instead. A backup file from local mode can't be imported there yet. Ask for that if you switch.
 
 ---
 

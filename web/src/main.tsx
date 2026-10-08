@@ -8,6 +8,7 @@ import './styles/app.css';
 import { App } from './App.tsx';
 import { boot, setTab, setUi } from './store.ts';
 import { resyncPush } from './push.ts';
+import { LOCAL } from './config.ts';
 
 registerSW({ immediate: true });
 
@@ -18,4 +19,4 @@ navigator.serviceWorker?.addEventListener('message', e => {
 });
 
 createRoot(document.getElementById('root')!).render(<App />);
-boot().then(resyncPush);
+boot().then(() => { if (!LOCAL) resyncPush(); });

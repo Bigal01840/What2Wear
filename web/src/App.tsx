@@ -2,6 +2,8 @@ import { useEffect, useMemo, type ReactNode } from 'react';
 import { derive } from './derive.ts';
 import { setTab, setUi, store, useStore, type Tab } from './store.ts';
 import { I } from './components/ui.tsx';
+import { LOCAL } from './config.ts';
+import { showLocalNotification } from './push.ts';
 import { Tonight } from './screens/Tonight.tsx';
 import { Forecast } from './screens/Forecast.tsx';
 import { Nap } from './screens/Nap.tsx';
@@ -26,7 +28,14 @@ function useLocalReminder(remind: boolean, remindAt: string) {
       const now = new Date(), at = new Date(now);
       at.setHours(+p[0] || 0, +p[1] || 0, 0, 0);
       if (at <= now) at.setDate(at.getDate() + 1);
-      t = setTimeout(() => { if (derive(store.get()).pending) setUi({ notif: true }); schedule(); }, at.getTime() - now.getTime());
+      t = setTimeout(() => {
+        const d = derive(store.get());
+        if (d.pending) {
+          setUi({ notif: true });
+          if (LOCAL) showLocalNotification(d.child);
+        }
+        schedule();
+      }, at.getTime() - now.getTime());
     };
     schedule();
     return () => clearTimeout(t);

@@ -60,3 +60,12 @@ export async function sendTestPush(): Promise<boolean> {
     return false;
   }
 }
+
+/** Local mode has no push server, so show a system notification while the app is open (as the prototype did). */
+export function showLocalNotification(child: string) {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  navigator.serviceWorker?.ready.then(r => r.showNotification(`How did ${child} sleep?`, {
+    body: 'Tap to rate last night and add the morning room reading.', tag: 'morning-reminder',
+    icon: '/icons/icon-192.png', data: { url: '/morning' },
+  })).catch(() => {});
+}

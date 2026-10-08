@@ -9,7 +9,9 @@
   },
   "scripts": {
     "dev": "concurrently -k -n server,web -c red,gray \"tsx watch server/main.ts\" \"vite --config web/vite.config.ts\"",
+    "dev:local": "VITE_LOCAL=1 vite --config web/vite.config.ts",
     "build": "vite build --config web/vite.config.ts && node scripts/build-server.mjs",
+    "build:local": "VITE_LOCAL=1 vite build --config web/vite.config.ts --outDir ../dist/local && node scripts/postbuild-local.mjs",
     "start": "NODE_ENV=production node dist/server/main.js",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p web/tsconfig.sw.json --noEmit",

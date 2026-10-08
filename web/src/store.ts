@@ -10,6 +10,8 @@ import {
   DEFAULT_SETTINGS, isoLocal, nightWindow,
   type Door, type Item, type Nap, type Night, type NightWindow, type Settings, type Slot,
 } from '../../shared/model.ts';
+import { fetchForecast, fetchPostcode } from '../../shared/weather.ts';
+import { LOCAL } from './config.ts';
 
 export type Tab = 'tonight' | 'forecast' | 'nap' | 'morning' | 'wardrobe' | 'history';
 export const TABS: Tab[] = ['tonight', 'forecast', 'nap', 'morning', 'wardrobe', 'history'];
@@ -159,6 +161,12 @@ function persist() {
 }
 
 function enqueue(op: Op) {
+  if (LOCAL) {
+    // No server: this phone's IndexedDB is the only copy.
+    setState(s => ({ data: applyOp(s.data, op) }));
+    set('data', state.data).catch(() => {});
+    return;
+  }
   outbox = outbox.filter(o => o.key !== op.key).concat(op);
   setState(s => ({ data: applyOp(s.data, op) }));
   persist();
@@ -202,6 +210,7 @@ export function flush(): Promise<boolean> {
 
 /** Push pending writes, then pull the shared state. */
 export async function refresh() {
+  if (LOCAL) return true;
   try {
     await flush();
     const j = await api<Data & { serverTime: number }>('GET', '/api/state');
@@ -254,8 +263,10 @@ export async function fetchWeather() {
   const { lat, lon } = state.data.settings;
   setState(s => ({ wx: { ...s.wx, status: 'loading' } }));
   try {
-    const j = await api<{ source: string; time: string[]; temperature_2m: (number | null)[] }>(
-      'GET', `/api/weather?lat=${encodeURIComponent(String(lat))}&lon=${encodeURIComponent(String(lon))}`);
+    const j = LOCAL
+      ? await fetchForecast(Number(lat), Number(lon))
+      : await api<{ source: string; time: string[]; temperature_2m: (number | null)[] }>(
+        'GET', `/api/weather?lat=${encodeURIComponent(String(lat))}&lon=${encodeURIComponent(String(lon))}`);
     if (!applyWeather(j.source, j.time, j.temperature_2m)) throw new Error('no window for tonight');
     set('wx', { src: j.source, time: j.time, temp: j.temperature_2m, lat, lon }).catch(() => {});
   } catch {
@@ -272,7 +283,7 @@ export async function lookupPostcode() {
   if (!pc) return setUi({ pcMsg: 'Enter a postcode first.', pcErr: true });
   setUi({ pcMsg: 'Looking up…', pcErr: false });
   try {
-    const j = await api('GET', '/api/postcode/' + encodeURIComponent(pc));
+    const j = LOCAL ? await fetchPostcode(pc) : await api('GET', '/api/postcode/' + encodeURIComponent(pc));
     if (j.status !== 200 || !j.result) throw 0;
     const x = j.result;
     const city = x.admin_district || x.parish || x.region || pc;
@@ -300,6 +311,7 @@ export async function login(passcode: string): Promise<string | null> {
 }
 
 export async function boot() {
+  if (LOCAL) return bootLocal();
   const [data, device, ob] = await Promise.all([get('data'), get('device'), get('outbox')]).catch(() => [null, null, null]);
   outbox = Array.isArray(ob) ? ob : [];
   setState(s => ({
@@ -324,4 +336,63 @@ export async function boot() {
 
 export function setWx(patch: Partial<Wx>) {
   setState(s => ({ wx: { ...s.wx, ...patch } }));
+}
+
+// ── Local mode ──────────────────────────────────────────────────────
+
+async function bootLocal() {
+  const [data, device] = await Promise.all([get('data'), get('device')]).catch(() => [null, null]);
+  setState(s => ({
+    data: data ? { ...s.data, ...data, settings: { ...s.data.settings, ...data.settings } } : s.data,
+    device: device ? { ...s.device, ...device } : s.device,
+    loaded: true,
+    auth: 'in',
+  }));
+  // Ask the browser not to evict our storage under pressure.
+  navigator.storage?.persist?.().catch(() => {});
+  fetchWeather();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && state.wx.status !== 'loading') fetchWeather();
+  });
+}
+
+// ── Backup file (Export / Import) ───────────────────────────────────
+
+export interface Backup {
+  app: 'sleep-outfit';
+  version: 1;
+  exportedAt: string;
+  data: Data;
+  device: Device;
+}
+
+export function makeBackup(): Backup {
+  return { app: 'sleep-outfit', version: 1, exportedAt: new Date().toISOString(), data: state.data, device: state.device };
+}
+
+/** Parses a backup file; throws a readable message if it isn't one. */
+export function parseBackup(text: string): Backup {
+  let j: any;
+  try { j = JSON.parse(text); } catch { throw new Error('That file isn’t a Sleep Outfit backup.'); }
+  const d = j && j.data;
+  if (!j || j.app !== 'sleep-outfit' || !d || !Array.isArray(d.items) || !Array.isArray(d.nights) || !Array.isArray(d.naps) || !d.settings) {
+    throw new Error('That file isn’t a Sleep Outfit backup.');
+  }
+  return j as Backup;
+}
+
+/** Replaces everything on this phone with the backup. */
+export async function restoreBackup(b: Backup) {
+  const data: Data = {
+    settings: { ...DEFAULT_SETTINGS, ...b.data.settings },
+    items: b.data.items, nights: b.data.nights, naps: b.data.naps,
+  };
+  setState(s => ({
+    data,
+    device: b.device ? { ...s.device, ...b.device } : s.device,
+    ui: { ...s.ui, overrides: {}, fb: { rating: null, signs: [], note: '' }, learnMsg: '' },
+  }));
+  await set('data', state.data);
+  await set('device', state.device);
+  fetchWeather();
 }

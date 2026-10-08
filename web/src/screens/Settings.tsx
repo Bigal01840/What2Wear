@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
-import type { Settings as S } from '../../../shared/model.ts';
-import { fetchWeather, lookupPostcode, saveSettings, setUi, type State } from '../store.ts';
+import { useEffect, useRef, useState } from 'react';
+import { isoLocal, type Settings as S } from '../../../shared/model.ts';
+import { get, set } from 'idb-keyval';
+import { fetchWeather, flash, lookupPostcode, makeBackup, parseBackup, restoreBackup, saveSettings, setUi, type State } from '../store.ts';
+import { LOCAL } from '../config.ts';
 import { Seg } from '../components/ui.tsx';
-import { enablePush, isIosBrowserTab, permission, pushSupported, sendTestPush, type Perm } from '../push.ts';
+import { enablePush, isIosBrowserTab, showLocalNotification, permission, pushSupported, sendTestPush, type Perm } from '../push.ts';
 
 export function SettingsSheet({ s }: { s: State }) {
   const st = s.data.settings;
@@ -16,6 +18,10 @@ export function SettingsSheet({ s }: { s: State }) {
   const input = (k: 'child' | 'age' | 'postcode' | 'city' | 'lat' | 'lon') => ({ value: String(st[k] ?? ''), onChange: onSet(k) });
 
   const notifStatus = !st.remind ? 'Off.'
+    : LOCAL ? (perm === 'granted' ? 'Daily at ' + (st.remindAt || '07:00') + '. Shows as a phone notification while the app is open.'
+      : perm === 'denied' ? 'Notifications are blocked in this browser, so the reminder only shows inside the app.'
+      : perm === 'none' ? 'This browser can’t show system notifications; the reminder shows inside the app.'
+      : 'Allow notifications when asked to get it on your lock screen.')
     : perm === 'granted' ? `Daily at ${st.remindAt || '07:00'} while a night is unrated. Arrives on this phone as a notification.`
     : perm === 'denied' ? 'Notifications are blocked for this app, so the reminder only shows inside the app.'
     : perm === 'none' ? (isIosBrowserTab() ? 'Add Sleep Outfit to your Home Screen to get the reminder as a notification.' : 'This browser can’t show system notifications; the reminder shows inside the app.')
@@ -23,10 +29,18 @@ export function SettingsSheet({ s }: { s: State }) {
 
   const pickRemind = (v: boolean) => {
     saveSettings({ remind: v });
+    if (LOCAL) {
+      if (v && typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission().then(() => setPerm(permission())).catch(() => {});
+      return;
+    }
     if (v && pushSupported() && Notification.permission === 'default') enablePush().finally(() => setPerm(permission())).catch(() => {});
   };
   const testNotif = () => {
     close();
+    if (LOCAL) {
+      setTimeout(() => { showLocalNotification(st.child || 'Our toddler'); setUi({ notif: true }); }, 400);
+      return;
+    }
     sendTestPush().then(ok => {
       setPerm(permission());
       // No push on this phone: show the in-app banner, as the prototype did.
@@ -64,7 +78,72 @@ export function SettingsSheet({ s }: { s: State }) {
         <div className="field"><label>Learn from morning feedback</label>
           <Seg name="learn" value={st.learning} opts={[[true, 'On'], [false, 'Off — use guide only']]} onPick={v => saveSettings({ learning: v })} minHeight={40} />
         </div>
+        {LOCAL && <BackupField />}
       </div>
     </div>
   );
 }
+
+/** Local mode only: everything lives on this phone, so offer a backup file. */
+function BackupField() {
+  const [last, setLast] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { get('lastExport').then(v => setLast(v ?? null)).catch(() => {}); }, []);
+
+  const exportData = async () => {
+    const b = makeBackup();
+    const name = `sleep-outfit-backup-${isoLocal(new Date())}.json`;
+    const file = new File([JSON.stringify(b)], name, { type: 'application/json' });
+    try {
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Sleep Outfit backup' }); // iPhone: "Save to Files"
+      } else {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(file);
+        a.download = name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+      }
+    } catch (e) {
+      if ((e as Error)?.name === 'AbortError') return; // share sheet cancelled
+      flash('Couldn’t save the backup');
+      return;
+    }
+    const when = new Date().toISOString();
+    set('lastExport', when).catch(() => {});
+    setLast(when);
+  };
+
+  const importData = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    try {
+      const b = parseBackup(await f.text());
+      const when = new Date(b.exportedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      if (!window.confirm(`Replace everything on this phone with the backup from ${when}? It has ${plural(b.data.items.length, 'item')} and ${plural(b.data.nights.length, 'night')}.`)) return;
+      await restoreBackup(b);
+      setUi({ sheet: false });
+      flash('Backup restored');
+    } catch (err) {
+      flash((err as Error).message || 'Couldn’t read that file');
+    }
+  };
+
+  const lastLabel = last ? new Date(last).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : null;
+  return (
+    <div className="field"><label>Backup</label>
+      <div style={{ fontSize: 12, color: 'var(--color-neutral-700)', marginBottom: 8, textWrap: 'pretty' } as any}>
+        Everything is stored on this phone only. Save a backup file to iCloud Drive or Files now and then.
+        {lastLabel ? ` Last saved ${lastLabel}.` : ' No backup saved yet.'}
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button className="btn btn-secondary" style={{ height: 40 }} onClick={exportData}>Export data</button>
+        <button className="btn btn-secondary" style={{ height: 40 }} onClick={() => fileRef.current?.click()}>Import data</button>
+        <input ref={fileRef} type="file" accept="application/json,.json" onChange={importData} style={{ display: 'none' }} />
+      </div>
+    </div>
+  );
+}
+
+const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;

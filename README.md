@@ -6,7 +6,7 @@ A private two-parent PWA that recommends what our toddler wears to bed: base lay
 - **Server:** Node + Hono (`server/`). It serves the PWA and a JSON API, stores data in SQLite (`better-sqlite3`) under `./data` and photos under `./data/photos` (480px, JPEG q82). It also proxies postcodes.io and Open-Meteo with a 30-minute cache and sends Web Push reminders.
 - **Model:** `shared/model.ts` is a direct port of the prototype's logic, used by both client and server.
 
-**Hosting and phone install:** see [docs/HOSTING.md](docs/HOSTING.md). It covers a Raspberry Pi with pm2 and Tailscale HTTPS, nightly backups, a Fly.io alternative, and installing on iPhone and Android.
+**Hosting and phone install:** see [docs/HOSTING.md](docs/HOSTING.md). It covers a single-phone **local mode** with no server (free static hosting, with Export/Import backups), a Raspberry Pi with pm2 and Tailscale HTTPS, nightly backups, a Fly.io alternative, and installing on iPhone and Android.
 
 ## Develop
 
@@ -22,6 +22,7 @@ npm run dev                 # API on :3000, PWA on http://localhost:5173 (proxie
 | `npm run dev` | Server (tsx watch) and Vite dev server |
 | `npm run build` | PWA → `dist/web`, server → `dist/server/main.js` |
 | `npm start` | Run the production build |
+| `npm run build:local` / `dev:local` | Single-phone build with no server → `dist/local` (static files; data stays on the phone) |
 | `npm test` | Vitest: model (`overnight`, `baseTog`, `learnFrom`, `combos` against the seed data), proxies, reminder cron |
 | `npm run typecheck` | `tsc` for app, server and service worker |
 | `npm run seed [-- --force]` | Load sample data. Refuses when `NODE_ENV=production` |

@@ -2,6 +2,7 @@ import { CATS, LEGS, SLEEVES, TOG_HINT, f1, newId, r1, type Cat, type Item } fro
 import { sleeveTxt } from '../derive.ts';
 import { api, deleteRecord, flash, saveRecord, setUi, type ItemDraft, type State } from '../store.ts';
 import { Header, I, Seg, bgImg } from '../components/ui.tsx';
+import { LOCAL } from '../config.ts';
 
 export const newItemDraft = (cat: Cat): ItemDraft => ({
   id: '', name: '', cat, tog: '1.0', sleeve: 'none', legs: 'na', fabric: '', size: '', link: '', photoUrl: '', available: true, notes: '',
@@ -86,6 +87,12 @@ export function ItemEditor({ s }: { s: State }) {
     if (!file) return;
     try {
       const blob = await shrink(file);
+      if (LOCAL) {
+        // No server: keep the (small, 480px) photo inside the item itself.
+        const url = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(blob); });
+        setD({ photoUrl: url });
+        return;
+      }
       setD({ uploading: true, preview: URL.createObjectURL(blob) } as any);
       const form = new FormData();
       form.append('photo', blob, 'photo.jpg');
