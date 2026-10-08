@@ -17,7 +17,7 @@ A and B run a single Node process. It serves the PWA and the API, stores everyth
 - **Data lives on the phone,** in the app's own storage (IndexedDB). That covers the wardrobe, photos (shrunk to 480px), every night, nap and morning rating, and settings. Everything the model has learned is recalculated from those rated nights, so keeping the data keeps the learning.
 - **Weather and postcode lookups** go straight from the phone to Open-Meteo and postcodes.io, as in the prototype.
 - **There's no login,** because the hosted files contain no data. Anyone who opens the URL gets an empty app on their own device.
-- **The reminder** shows as the in-app banner, plus a phone notification if allowed, but only while the app is open. There's no push when it's closed (see *Daily reminder* below).
+- **There's no reminder.** An unrated night shows as the red "How was last night?" banner on Tonight and a dot on the Morning tab.
 - **Settings, then Backup,** has **Export data** and **Import data**. Export saves a single `.json` file containing everything, photos included. On iPhone it opens the share sheet: choose **Save to Files**, then pick iCloud Drive. Import replaces everything on the phone with a backup, after asking first.
 
 > **Back up regularly.** If the app is deleted, website data is cleared, or the phone is lost or replaced, the only copy of your history is your latest export. To move to a new phone, install the app there and use **Import data**.

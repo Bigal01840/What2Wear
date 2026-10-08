@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { baseTog, clampT, combos, distinctTotals, learnFrom, overnight, r1, type Item } from '../shared/model.ts';
+import { ageMonths, baseTog, clampT, combos, distinctTotals, learnFrom, overnight, r1, type Item } from '../shared/model.ts';
 import { seed } from '../shared/seed.ts';
 
 const S = seed(new Date('2026-01-15T21:00:00'));
@@ -39,6 +39,11 @@ describe('overnight()', () => {
   });
   it('never rises above the room when it is warmer outside', () => {
     expect(overnight(20, 25, 18, 'closed')).toBe(20);
+  });
+  it('has no thermostat floor with the radiator off', () => {
+    expect(overnight(20, -10, null, 'closed')).toBe(16.4); // 20 − 30 × 0.12
+    expect(overnight(20, -10, null, 'open')).toBe(16.1);
+    expect(overnight(20, 25, null, 'closed')).toBe(20);
   });
   it('runs 0.3° cooler with the door open', () => {
     expect(overnight(21, 12, 18, 'open')).toBe(19.6);
@@ -145,5 +150,18 @@ describe('combos()', () => {
   });
   it('returns nothing without an available bag', () => {
     expect(combos(S.items.map(i => (i.cat === 'bag' ? { ...i, available: false } : i)), ov, target)).toEqual([]);
+  });
+});
+
+describe('ageMonths()', () => {
+  const now = new Date('2026-10-08T12:00:00');
+  it('counts whole months from the date of birth', () => {
+    expect(ageMonths('2024-07-08', now)).toBe(27);
+    expect(ageMonths('2024-07-09', now)).toBe(26); // not yet this month's birthday
+    expect(ageMonths('2026-10-01', now)).toBe(0);
+  });
+  it('returns null without a valid date', () => {
+    expect(ageMonths('', now)).toBeNull();
+    expect(ageMonths('27', now)).toBeNull();
   });
 });

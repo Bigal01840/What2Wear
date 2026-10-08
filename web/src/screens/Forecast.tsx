@@ -10,7 +10,7 @@ export function Forecast({ s, d }: { s: State; d: Derived }) {
   const allAvail = items.map(i => ({ ...i, available: true }));
 
   const rows = s.wx.fcNights.map(fn => {
-    const fov = overnight(dv.room, fn.avg, dv.thermo, dv.door);
+    const fov = overnight(dv.room, fn.avg, d.thermo, dv.door);
     const ftg = clampT(baseTog(fov) + L.offset);
     const c = combos(items, fov, ftg)[0];
     const ca = combos(allAvail, fov, ftg)[0];
@@ -27,7 +27,7 @@ export function Forecast({ s, d }: { s: State; d: Derived }) {
     <div>
       <Header kicker={`Next 3 nights · ${s.data.settings.city}`} title="Forecast" />
       <div style={{ padding: '10px 20px', borderBottom: '2px solid var(--color-divider)', background: 'var(--color-surface)', fontSize: 12, lineHeight: 1.4 }}>
-        Uses the 7pm–7am forecast with tonight’s room ({f1(dv.room)}°), radiator ({f1(dv.thermo)}°) and door settings.
+        Uses the 7pm–7am forecast with tonight’s room ({f1(dv.room)}°), radiator ({d.thermo == null ? 'off' : f1(d.thermo) + '°'}) and door settings.
       </div>
       {!rows.length && (
         <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>

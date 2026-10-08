@@ -52,9 +52,9 @@ export function SettingsSheet({ s }: { s: State }) {
     <div onClick={close} style={{ position: 'absolute', top: 44, left: 0, right: 0, bottom: 0, background: 'color-mix(in srgb,var(--color-neutral-900) 50%,transparent)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', zIndex: 6 }}>
       <div onClick={e => e.stopPropagation()} className="scr" style={{ background: 'var(--color-bg)', borderTop: '2px solid var(--color-text)', padding: '16px 20px calc(24px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '100%', overflowY: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'center' }}><h3 style={{ margin: 0, flex: 1 }}>Settings</h3><button className="btn btn-ghost" style={{ height: 44 }} onClick={close}>Done</button></div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) minmax(0,1fr)', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.2fr) minmax(0,1fr)', gap: 8 }}>
           <div className="field"><label htmlFor="st-child">Child’s name</label><input id="st-child" className="input" style={{ minHeight: 44 }} {...input('child')} /></div>
-          <div className="field"><label htmlFor="st-age">Age (months)</label><input id="st-age" className="input" style={{ minHeight: 44 }} type="number" inputMode="numeric" {...input('age')} /></div>
+          <div className="field"><label htmlFor="st-dob">Date of birth</label><input id="st-dob" className="input" style={{ minHeight: 44 }} type="date" max={isoLocal(new Date())} value={st.dob || ''} onChange={e => saveSettings({ dob: e.target.value })} /></div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <div className="field" style={{ flex: 1, minWidth: 0 }}><label htmlFor="st-pc">Postcode</label><input id="st-pc" className="input" style={{ minHeight: 44, textTransform: 'uppercase' }} placeholder="e.g. SW1A 1AA" autoCapitalize="characters" {...input('postcode')} /></div>
@@ -67,14 +67,14 @@ export function SettingsSheet({ s }: { s: State }) {
           <div className="field"><label htmlFor="st-lon">Lon</label><input id="st-lon" className="input" style={{ minHeight: 44 }} inputMode="decimal" {...input('lon')} /></div>
         </div>
         <button className="btn btn-secondary" style={{ alignSelf: 'flex-start', height: 44 }} onClick={fetchWeather}>Refresh 7pm–7am forecast</button>
-        <div className="field"><label>Morning reminder</label>
+        {!LOCAL && <div className="field"><label>Morning reminder</label>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <Seg name="remind" value={!!st.remind} opts={[[true, 'On'], [false, 'Off']]} onPick={pickRemind} />
             <input className="input" type="time" aria-label="Reminder time" style={{ minHeight: 38, width: 120 }} value={st.remindAt} onChange={e => saveSettings({ remindAt: e.target.value || '07:00' })} />
           </div>
           <div style={{ fontSize: 12, color: 'var(--color-neutral-700)', marginTop: 6, textWrap: 'pretty' } as any}>{notifStatus}</div>
           <button className="btn btn-secondary" style={{ marginTop: 8, height: 40 }} onClick={testNotif}>Send a test reminder</button>
-        </div>
+        </div>}
         <div className="field"><label>Learn from morning feedback</label>
           <Seg name="learn" value={st.learning} opts={[[true, 'On'], [false, 'Off — use guide only']]} onPick={v => saveSettings({ learning: v })} minHeight={40} />
         </div>

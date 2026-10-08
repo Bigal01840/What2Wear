@@ -101,7 +101,7 @@ export function NightEditor({ s, d }: { s: State; d: Derived }) {
   const save = () => {
     const p = (v: string) => (v === '' || v == null ? null : parseFloat(v));
     const room = p(nd.room), outdoor = p(nd.outdoor), thermo = p(nd.thermo), mr = p(nd.morningRoom), hum = p(nd.humidity), mh = p(nd.morningHum);
-    if (room == null || isNaN(room) || outdoor == null || isNaN(outdoor) || thermo == null || isNaN(thermo)) return setUi({ ndErr: 'Bedtime room, outside and radiator need numbers.' });
+    if (room == null || isNaN(room) || outdoor == null || isNaN(outdoor) || (thermo != null && isNaN(thermo))) return setUi({ ndErr: 'Bedtime room and outside need numbers.' });
     if (!nd.slots.bag) return setUi({ ndErr: 'Choose the sleeping bag worn.' });
     const ids = SLOTS.map(sl => nd.slots[sl.id]).filter(Boolean);
     const tog = r1(ids.reduce((a, id) => a + (byId(id)?.tog ?? 0), 0));
@@ -141,7 +141,7 @@ export function NightEditor({ s, d }: { s: State; d: Derived }) {
           {numField('nd-room', 'Room temp °C', '0.1', 'room')}
           {numField('nd-hum', 'Humidity %', '1', 'humidity')}
           {numField('nd-out', 'Outside avg °C', '1', 'outdoor')}
-          {numField('nd-thermo', 'Radiator °C', '0.5', 'thermo')}
+          {numField('nd-thermo', 'Radiator °C (blank = off)', '0.5', 'thermo')}
         </div>
         <div className="field"><label>Door</label><Seg name="nddoor" value={nd.door} opts={[['closed', 'Closed'], ['open', 'Open']]} onPick={v => ndSet({ door: v })} minHeight={40} /></div>
         {rule}

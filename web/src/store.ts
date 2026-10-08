@@ -20,7 +20,7 @@ export interface Data { settings: Settings; items: Item[]; nights: Night[]; naps
 
 /** Bedtime inputs, kept per phone like the prototype kept them per browser. */
 export interface Device {
-  room: number; humidity: number; outdoor: number; thermo: number; door: Door;
+  room: number; humidity: number; outdoor: number; thermo: number; radiator: boolean; door: Door;
   napStart: string; napEnd: string; napRoom: number; napDoor: Door;
 }
 
@@ -78,7 +78,7 @@ const initial: State = {
   auth: 'unknown',
   loaded: false,
   data: { settings: { ...DEFAULT_SETTINGS, updatedAt: 0 }, items: [], nights: [], naps: [] },
-  device: { room: 20.5, humidity: 55, outdoor: 9, thermo: 18, door: 'closed', napStart: '12:30', napEnd: '14:30', napRoom: 21, napDoor: 'closed' },
+  device: { room: 20.5, humidity: 55, outdoor: 9, thermo: 18, radiator: true, door: 'closed', napStart: '12:30', napEnd: '14:30', napRoom: 21, napDoor: 'closed' },
   wx: { status: 'idle', src: '', hourly: null, outdoorAuto: false, outdoorRange: null, fcNights: [] },
   ui: {
     tab: tabFromPath(location.pathname), overrides: {}, health: [], fb: { rating: null, signs: [], note: '' },

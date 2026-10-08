@@ -46,7 +46,8 @@ export function App() {
   const s = useStore();
   const d = useMemo(() => derive(s), [s.data, s.device, s.ui.health, s.ui.overrides]);
   const ui = s.ui;
-  useLocalReminder(s.data.settings.remind, s.data.settings.remindAt);
+  // Local mode has no reminder; the Tonight banner and Morning dot still flag an unrated night.
+  useLocalReminder(!LOCAL && s.data.settings.remind, s.data.settings.remindAt);
 
   if (s.auth === 'out' || (s.auth === 'unknown' && s.loaded)) {
     return <div className="app"><div className="frame"><div className="statusbar" /><div className="scr scr-main" style={{ bottom: 0 }}><Login /></div></div></div>;

@@ -56,12 +56,12 @@ export function BigNum({ value, onCommit, step, label, unit }: {
   );
 }
 
-export function Steppers({ down, up, style }: { down: () => void; up: () => void; style?: CSSProperties }) {
+export function Steppers({ down, up, style, disabled }: { down: () => void; up: () => void; style?: CSSProperties; disabled?: boolean }) {
   const b: CSSProperties = { width: 44, height: 36, padding: 0 };
   return (
     <div style={{ display: 'flex', gap: 4, ...style }}>
-      <button className="btn btn-secondary" style={b} onClick={down} aria-label="Lower">{I.minus()}</button>
-      <button className="btn btn-secondary" style={b} onClick={up} aria-label="Raise">{I.plus()}</button>
+      <button className="btn btn-secondary" style={b} onClick={down} disabled={disabled} aria-label="Lower">{I.minus()}</button>
+      <button className="btn btn-secondary" style={b} onClick={up} disabled={disabled} aria-label="Raise">{I.plus()}</button>
     </div>
   );
 }

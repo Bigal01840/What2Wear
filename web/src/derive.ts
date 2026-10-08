@@ -1,6 +1,6 @@
 // Values computed from state, ported from the prototype's renderVals().
 import {
-  FEVER, LEARNING_RATE, SLOTS, SLOT_OF, baseTog, clampT, combos, dayLabel, distinctTotals, humAdjOf, isoLocal,
+  FEVER, LEARNING_RATE, ageMonths, SLOTS, SLOT_OF, baseTog, clampT, combos, dayLabel, distinctTotals, humAdjOf, isoLocal,
   learnFrom, overnight, type Item, type Night,
 } from '../../shared/model.ts';
 import type { State } from './store.ts';
@@ -14,7 +14,8 @@ export function derive(s: State) {
   const learn = (list: Parameters<typeof learnFrom>[0], door: string | null) =>
     settings.learning ? learnFrom(list, LEARNING_RATE, door) : { offset: 0, n: 0, doorN: 0 };
 
-  const ov = overnight(d.room, d.outdoor, d.thermo, d.door);
+  const thermo = d.radiator === false ? null : d.thermo; // null: radiator off
+  const ov = overnight(d.room, d.outdoor, thermo, d.door);
   const guide = baseTog(ov);
   const L = learn(nights, d.door);
   const humAdj = humAdjOf(d.humidity);
@@ -35,7 +36,7 @@ export function derive(s: State) {
   const namesOf = (n: Night) => n.items.map(id => byId(id)?.name ?? '(deleted item)').join(' + ');
 
   return {
-    items, byId, child, today, ov, guide, L, learn, humAdj, hasFever, feverAdj, target,
+    items, byId, child, today, thermo, ov, guide, L, learn, humAdj, hasFever, feverAdj, target,
     all, best, cur, curItems, total, sorted, pending, fbTarget, tonightN, namesOf,
   };
 }
@@ -44,8 +45,9 @@ export type Derived = ReturnType<typeof derive>;
 
 export const sleeveTxt: Record<string, string> = { short: 'Short sleeve', long: 'Long sleeve', none: '' };
 
-export function ageLabel(age: number | string) {
-  const a = +age || 0;
+/** Age from date of birth (falls back to the old months field). */
+export function ageLabel(settings: { dob?: string; age: number | string }) {
+  const a = ageMonths(settings.dob || '') ?? (+settings.age || 0);
   return a < 24 ? a + 'm' : Math.floor(a / 12) + 'y ' + (a % 12) + 'm';
 }
 

@@ -31,7 +31,7 @@ export interface Night {
   humidity?: number | null;
   outdoor: number; // 7pm–7am average
   outdoorRange?: { min: number; max: number } | null;
-  thermo: number;
+  thermo: number | null; // radiator setpoint; null = radiator off
   door?: Door;
   overnight: number; // model estimate
   items: string[];
@@ -65,7 +65,8 @@ export interface Nap {
 
 export interface Settings {
   child: string;
-  age: number | string; // months
+  age: number | string; // months (used only if dob is empty)
+  dob: string; // YYYY-MM-DD
   postcode: string;
   city: string;
   lat: number | string;
@@ -117,7 +118,7 @@ export const LEARNING_RATE = 1;
 export const SHOW_ALTERNATIVES = true;
 
 export const DEFAULT_SETTINGS: Omit<Settings, 'updatedAt'> = {
-  child: 'Our toddler', age: 27, postcode: '', city: 'London', lat: 51.51, lon: -0.13,
+  child: 'Our toddler', age: 27, dob: '', postcode: '', city: 'London', lat: 51.51, lon: -0.13,
   learning: true, remind: true, remindAt: '07:00',
 };
 
@@ -138,9 +139,10 @@ export function baseTog(t: number): number {
   return GUIDE[GUIDE.length - 1][1];
 }
 
-/** Overnight room estimate. */
-export function overnight(room: number, out: number, thermo: number, door?: Door | string): number {
-  const b = Math.min(room, Math.max(thermo - 0.5, room - Math.max(0, room - out) * 0.12));
+/** Overnight room estimate. thermo = null means the radiator is off, so nothing stops the drift. */
+export function overnight(room: number, out: number, thermo: number | null, door?: Door | string): number {
+  const floor = thermo == null ? -Infinity : thermo - 0.5;
+  const b = Math.min(room, Math.max(floor, room - Math.max(0, room - out) * 0.12));
   return r1(door === 'open' ? b - 0.3 : b);
 }
 
@@ -234,6 +236,15 @@ export function nightWindow(time: string[], temp: (number | null)[], date: strin
   if (w.length < 6) return null;
   const avg = w.reduce((a, b) => a + b, 0) / w.length;
   return { date, avg: Math.round(avg), min: Math.round(Math.min(...w)), max: Math.round(Math.max(...w)) };
+}
+
+/** Whole months from a YYYY-MM-DD birth date to `now`. */
+export function ageMonths(dob: string, now = new Date()): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dob || '');
+  if (!m) return null;
+  let months = (now.getFullYear() - +m[1]) * 12 + (now.getMonth() + 1 - +m[2]);
+  if (now.getDate() < +m[3]) months--;
+  return Math.max(0, months);
 }
 
 export function isoLocal(d: Date): string {

@@ -23,7 +23,7 @@ export function Tonight({ s, d }: { s: State; d: Derived }) {
 
   const longNow = curItems.some(i => i.sleeve === 'long');
   const reasons = [
-    `Room should settle around ${f1(ov)}°C overnight (${f1(dv.room)}° now, ${dv.outdoor}° average outside 7pm–7am${wx.outdoorAuto && wx.outdoorRange ? ` (${wx.outdoorRange.min}–${wx.outdoorRange.max}°)` : ''}, radiator at ${f1(dv.thermo)}°).`,
+    `Room should settle around ${f1(ov)}°C overnight (${f1(dv.room)}° now, ${dv.outdoor}° average outside 7pm–7am${wx.outdoorAuto && wx.outdoorRange ? ` (${wx.outdoorRange.min}–${wx.outdoorRange.max}°)` : ''}, ${d.thermo == null ? 'radiator off' : `radiator at ${f1(d.thermo)}°`}).`,
     `The standard guide for ${f1(ov)}°C is ${f1(guide)} TOG in total.`,
     L.n < 2 ? 'Not enough morning feedback yet to adjust the guide.'
       : Math.abs(L.offset) < 0.1 ? `${L.n} rated nights match the guide, so no adjustment.`
@@ -41,7 +41,7 @@ export function Tonight({ s, d }: { s: State; d: Derived }) {
   const logTonight = () => {
     if (!cur) return;
     const rec: Night = {
-      id: tonightN?.id ?? newId('n'), date: d.today, room: dv.room, outdoor: dv.outdoor, thermo: dv.thermo, overnight: ov,
+      id: tonightN?.id ?? newId('n'), date: d.today, room: dv.room, outdoor: dv.outdoor, thermo: d.thermo, overnight: ov,
       items: curIds, tog: r1(total), target, rating: null, signs: [], note: '',
       outdoorRange: wx.outdoorAuto ? wx.outdoorRange : null, door: dv.door, health: ui.health, humidity: dv.humidity, updatedAt: 0,
     };
@@ -85,9 +85,11 @@ export function Tonight({ s, d }: { s: State; d: Derived }) {
         </div>
         <div style={cell(true, false)}>
           <div className="lbl">Radiator</div>
-          <BigNum value={dv.thermo} step={0.5} label="Radiator setpoint" unit="°" onCommit={v => setDevice({ thermo: v })} />
-          <div style={sub}>Thermostat</div>
-          <Steppers style={{ marginTop: 6 }} down={step('thermo', -0.5, 5, 30)} up={step('thermo', 0.5, 5, 30)} />
+          {dv.radiator !== false
+            ? <BigNum value={dv.thermo} step={0.5} label="Radiator setpoint" unit="°" onCommit={v => setDevice({ thermo: v })} />
+            : <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1, borderBottom: '2px solid transparent' }}>Off</div>}
+          <div style={sub}>{dv.radiator !== false ? 'Thermostat' : 'No heating overnight'}</div>
+          <Steppers style={{ marginTop: 6 }} disabled={dv.radiator === false} down={step('thermo', -0.5, 5, 30)} up={step('thermo', 0.5, 5, 30)} />
         </div>
         <div style={cell(false, false)}>
           <div className="lbl">Humidity</div>
@@ -100,6 +102,10 @@ export function Tonight({ s, d }: { s: State; d: Derived }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', borderBottom: '2px solid var(--color-divider)' }}>
         <div className="lbl" style={{ flex: 1 }}>Nursery door</div>
         <Seg name="door" value={dv.door} opts={[['closed', 'Closed'], ['open', 'Open']]} onPick={v => setDevice({ door: v })} />
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', borderBottom: '2px solid var(--color-divider)' }}>
+        <div className="lbl" style={{ flex: 1 }}>Radiator</div>
+        <Seg name="radiator" value={dv.radiator !== false} opts={[[true, 'On'], [false, 'Off']]} onPick={v => setDevice({ radiator: v })} />
       </div>
       <div style={{ padding: '10px 20px 12px', borderBottom: '2px solid var(--color-divider)' }}>
         <div className="lbl" style={{ marginBottom: 8 }}>Tonight {child} is</div>
@@ -139,7 +145,7 @@ export function Tonight({ s, d }: { s: State; d: Derived }) {
       {best && cur && (
         <>
           <div style={{ padding: '18px 20px 4px' }}>
-            <div className="kicker">Dress {child} ({ageLabel(s.data.settings.age)}) in</div>
+            <div className="kicker">Dress {child} ({ageLabel(s.data.settings)}) in</div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, margin: '2px 0 10px' }}>
               <div style={{ fontSize: 64, fontWeight: 800, lineHeight: 0.95, letterSpacing: '-.03em', color: 'var(--color-accent)' }}>{f1(total)}</div>
               <div style={{ fontSize: 15, fontWeight: 800, paddingBottom: 6, flex: 1 }}>TOG</div>
