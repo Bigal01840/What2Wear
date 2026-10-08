@@ -22,22 +22,25 @@ A and B run a single Node process. It serves the PWA and the API, stores everyth
 
 > **Back up regularly.** If the app is deleted, website data is cleared, or the phone is lost or replaced, the only copy of your history is your latest export. To move to a new phone, install the app there and use **Import data**.
 
-### Host it free on Cloudflare Pages (auto-deploys from GitHub)
+### Host it free on Cloudflare (auto-deploys from GitHub)
 
 1. Create a free account at <https://dash.cloudflare.com>.
-2. Go to **Workers & Pages**, then **Create**, then **Pages**, then **Connect to Git**, and pick `Bigal01840/What2Wear`.
-3. Use these build settings:
-   - Production branch: the branch you deploy from
-   - Build command: `npm run build:local`
-   - Build output directory: `dist/local`
-   - Environment variable: `NODE_VERSION` = `22`
-4. Click **Save and Deploy**. You get a URL like `https://sleep-outfit.pages.dev`.
+2. Go to **Workers & Pages**, then **Create**, then **Import a repository**. Connect GitHub and pick `Bigal01840/What2Wear`.
+3. Fill in the form:
+   - **Project name:** `sleep-outfit`. This must match `name` in `wrangler.jsonc`.
+   - **Build command:** `npm run build:local`
+   - **Deploy command:** `npx wrangler deploy`
+   - **Non-production branch deploy command:** leave the default.
+   - **Path:** leave it as `/`.
+   - **API token:** leave it as is (Cloudflare creates one).
+   - Under **Advanced settings** or **Variables**, add `NODE_VERSION` = `22`.
+4. Click **Deploy**. You get a URL like `https://sleep-outfit.<your-subdomain>.workers.dev`.
+
+`wrangler.jsonc` tells Cloudflare to serve `dist/local` and to fall back to the app for routes like `/morning`.
 
 **No GitHub connection?** Build on your computer with `npm run build:local`, then either:
-- run `npx wrangler pages deploy dist/local --project-name sleep-outfit`, or
+- run `npx wrangler deploy`, or
 - drag the `dist/local` folder onto <https://app.netlify.com/drop>.
-
-The build writes `_redirects` and `_headers` so that `/morning` and the other routes work on both Cloudflare and Netlify.
 
 ### Install (one phone)
 

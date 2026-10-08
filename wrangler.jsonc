@@ -1,0 +1,11 @@
+// Cloudflare Workers (static assets only) for the single-phone local build.
+// Dashboard settings: Build command `npm run build:local`, Deploy command `npx wrangler deploy`.
+{
+  "name": "sleep-outfit",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./dist/local",
+    // Serve the app shell for /morning, /wardrobe … on first load.
+    "not_found_handling": "single-page-application"
+  }
+}
