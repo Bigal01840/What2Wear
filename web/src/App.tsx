@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { derive } from './derive.ts';
 import { setTab, setUi, store, useStore, type Tab } from './store.ts';
 import { I } from './components/ui.tsx';
@@ -15,13 +15,6 @@ const TAB_DEF: [Tab, string, () => ReactNode][] = [
   ['tonight', 'Tonight', I.moon], ['forecast', 'Forecast', I.calendar], ['nap', 'Nap', I.cloud],
   ['morning', 'Morning', () => I.sun()], ['wardrobe', 'Wardrobe', I.shirt], ['history', 'History', I.chart],
 ];
-
-function useClock() {
-  const fmt = () => new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-  const [t, setT] = useState(fmt);
-  useEffect(() => { const id = setInterval(() => setT(fmt()), 10_000); return () => clearInterval(id); }, []);
-  return t;
-}
 
 /** While the app is open, show the in-app banner at the reminder time (push covers it when closed). */
 function useLocalReminder(remind: boolean, remindAt: string) {
@@ -43,12 +36,11 @@ function useLocalReminder(remind: boolean, remindAt: string) {
 export function App() {
   const s = useStore();
   const d = useMemo(() => derive(s), [s.data, s.device, s.ui.health, s.ui.overrides]);
-  const clock = useClock();
   const ui = s.ui;
   useLocalReminder(s.data.settings.remind, s.data.settings.remindAt);
 
   if (s.auth === 'out' || (s.auth === 'unknown' && s.loaded)) {
-    return <div className="app"><div className="frame"><div className="statusbar"><span style={{ flex: 1 }}>{clock}</span></div><div className="scr scr-main" style={{ bottom: 0 }}><Login /></div></div></div>;
+    return <div className="app"><div className="frame"><div className="statusbar" /><div className="scr scr-main" style={{ bottom: 0 }}><Login /></div></div></div>;
   }
   if (!s.loaded) return <div className="app" />;
 
@@ -56,7 +48,7 @@ export function App() {
     <div className="app">
       <div className="frame">
         <div className="statusbar">
-          <span style={{ flex: 1 }}>{clock}</span><span style={{ fontSize: 12 }}>{s.data.settings.city}</span>
+          <span style={{ flex: 1 }} /><span style={{ fontSize: 12 }}>{s.data.settings.city}</span>
         </div>
 
         <div className="scr scr-main">
