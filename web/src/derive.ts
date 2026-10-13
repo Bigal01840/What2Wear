@@ -1,6 +1,6 @@
 // Values computed from state, ported from the prototype's renderVals().
 import {
-  DRIFT, FEVER, LEARNING_RATE, ageMonths, learnAt, learnDrift, SLOTS, SLOT_OF, baseTog, clampT, combos, dayLabel, distinctTotals, humAdjOf, isoLocal,
+  DAYTEMP_COEF, DRIFT, FEVER, LEARNING_RATE, SUN_COEF, WIND_COEF, ageMonths, learnAt, learnBedtime, learnDrift, SLOTS, SLOT_OF, baseTog, clampT, combos, dayLabel, distinctTotals, humAdjOf, isoLocal,
   learnFrom, overnight, type Item, type Night,
 } from '../../shared/model.ts';
 import type { State } from './store.ts';
@@ -15,9 +15,15 @@ export function derive(s: State) {
     settings.learning ? learnFrom(list, LEARNING_RATE, door) : { offset: 0, n: 0, doorN: 0 };
 
   // How this nursery cools, learned from morning readings (the standard rule when learning is off).
-  const K = settings.learning ? learnDrift(nights) : { drift: DRIFT, n: 0 };
+  const K = settings.learning ? learnDrift(nights) : { drift: DRIFT, windCoef: WIND_COEF, n: 0, nWind: 0 };
+  // How much daytime sun and warmth lift the bedtime room (for forecast nights).
+  const B = settings.learning ? learnBedtime(nights) : { sunCoef: SUN_COEF, tempCoef: DAYTEMP_COEF, n: 0 };
+  /** Cooling model for a night with this average wind. */
+  const cooling = (wind: number | null | undefined) => ({ drift: K.drift, windCoef: K.windCoef, wind: wind ?? null });
   const thermo = d.radiator === false ? null : d.thermo; // null: radiator off
-  const ov = overnight(d.room, d.outdoor, thermo, d.door, K.drift);
+  // Tonight's wind only applies while the outside figure is the live forecast.
+  const wind = s.wx.outdoorAuto ? s.wx.wind : null;
+  const ov = overnight(d.room, d.outdoor, thermo, d.door, cooling(wind));
   const guide = baseTog(ov);
   const L = learn(nights, d.door); // overall warm/cool offset (History, Morning messages)
   /** Offset for a night at temperature t, from nearby rated nights. */
@@ -42,7 +48,7 @@ export function derive(s: State) {
   const namesOf = (n: Night) => n.items.map(id => byId(id)?.name ?? '(deleted item)').join(' + ');
 
   return {
-    items, byId, child, today, thermo, K, ov, guide, L, LT, offsetAt, learn, humAdj, hasFever, feverAdj, target,
+    items, byId, child, today, thermo, K, B, cooling, wind, ov, guide, L, LT, offsetAt, learn, humAdj, hasFever, feverAdj, target,
     all, best, cur, curItems, total, sorted, pending, fbTarget, tonightN, namesOf,
   };
 }

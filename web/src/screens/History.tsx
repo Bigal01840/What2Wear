@@ -1,4 +1,4 @@
-import { DRIFT, HEALTH, SIGNS, SLOTS, SLOT_OF, actualOf, baseTog, dayLabel, f1, overnight, r1, sgn, type Item, type Night } from '../../../shared/model.ts';
+import { DRIFT, SUN_COEF, WIND_COEF, HEALTH, SIGNS, SLOTS, SLOT_OF, actualOf, baseTog, dayLabel, f1, overnight, r1, sgn, type Item, type Night } from '../../../shared/model.ts';
 import type { Derived } from '../derive.ts';
 import { deleteRecord, flash, saveRecord, setUi, type NightDraft, type State } from '../store.ts';
 import { ChipList, Header, RatingGrid, Seg, rLabel, rTone } from '../components/ui.tsx';
@@ -21,7 +21,7 @@ function openNight(n: Night, items: Item[]) {
 }
 
 export function History({ s, d }: { s: State; d: Derived }) {
-  const { L, K, offsetAt, child, sorted } = d;
+  const { L, K, B, offsetAt, child, sorted } = d;
   const rated = sorted.filter(n => n.rating != null);
   const insight = L.n < 2 ? `Rate a few more mornings and this will show whether ${child} runs warm or cool.`
     : Math.abs(L.offset) < 0.1 ? `${child} sleeps comfortably at the standard guide. No adjustment applied.`
@@ -33,6 +33,12 @@ export function History({ s, d }: { s: State; d: Derived }) {
   const cooling = K.n
     ? `Learned from ${K.n} morning reading${K.n === 1 ? '' : 's'}: on a night 10° colder outside than the nursery, the room averages ${f1(K.drift * 10)}° below its bedtime temperature (standard ${f1(DRIFT * 10)}°).`
     : 'Add the morning room reading when you rate a night, and it will learn how quickly your nursery cools.';
+  const windTxt = K.nWind >= 3
+    ? ` Wind: each extra 10 km/h makes it cool about ${Math.round(K.windCoef * 1000)}% faster (learned from ${K.nWind} nights; standard ${Math.round(WIND_COEF * 1000)}%).`
+    : ' Windy nights are assumed to cool it faster (about 20% per extra 10 km/h) until it has 3 nights with wind and a morning reading.';
+  const sunTxt = B.n >= 3
+    ? `Daytime sun: a sunny day leaves the nursery about ${f1(B.sunCoef * 3)}° warmer at bedtime than a dull one (learned from ${B.n} bedtimes). Used for the Forecast.`
+    : `Daytime sun: assumed to add about ${f1(SUN_COEF * 3)}° at bedtime on a sunny day vs a dull one, until 3 logged bedtimes have sun data. Used for the Forecast.`;
   const legend = (sw: React.CSSProperties, l: string) => (
     <span style={{ display: 'flex', gap: 5, alignItems: 'center' }}><span style={sw} />{l}</span>
   );
@@ -47,7 +53,8 @@ export function History({ s, d }: { s: State; d: Derived }) {
       {s.data.settings.learning && (
         <div style={{ padding: '12px 20px', borderBottom: '2px solid var(--color-divider)', background: 'var(--color-surface)', fontSize: 13, lineHeight: 1.4 }}>
           <div style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--color-neutral-700)', marginBottom: 2 }}>Nursery cooling</div>
-          {cooling}
+          {cooling}{windTxt}
+          <div style={{ marginTop: 6 }}>{sunTxt}</div>
         </div>
       )}
       <div style={{ padding: '14px 20px 8px', borderBottom: '2px solid var(--color-divider)' }}>
@@ -123,7 +130,7 @@ export function NightEditor({ s, d }: { s: State; d: Derived }) {
     if (!orig) return setUi({ nightDraft: null });
     saveRecord('nights', {
       ...orig, room: r1(room), outdoor, thermo, humidity: hum != null && isNaN(hum) ? null : hum, morningRoom,
-      morningHum: mh == null || isNaN(mh) ? null : mh, door: nd.door, items: ids, tog, overnight: overnight(room, outdoor, thermo, nd.door, d.K.drift),
+      morningHum: mh == null || isNaN(mh) ? null : mh, door: nd.door, items: ids, tog, overnight: overnight(room, outdoor, thermo, nd.door, d.cooling(orig.wind)),
       rating: nd.rating, health: nd.health, signs: nd.signs, note: nd.note,
       actual: morningRoom == null ? null : actualOf(r1(room), morningRoom, nd.door),
     });

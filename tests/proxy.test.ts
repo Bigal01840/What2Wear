@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nightWindow } from '../shared/model.ts';
 
-const hourly = (vals: (number | null)[]) => ({
-  hourly: { time: vals.map((_, i) => `2026-01-15T${String(i % 24).padStart(2, '0')}:00`), temperature_2m: vals },
+const hourly = (vals: (number | null)[], extra = true) => ({
+  hourly: {
+    time: vals.map((_, i) => `2026-01-15T${String(i % 24).padStart(2, '0')}:00`), temperature_2m: vals,
+    ...(extra ? { wind_speed_10m: vals.map(() => 15), shortwave_radiation: vals.map(() => 100) } : {}),
+  },
 });
 
 afterEach(() => { vi.unstubAllGlobals(); vi.resetModules(); });
@@ -42,6 +45,18 @@ describe('weather proxy', () => {
     expect((await weather(53, -2)).source).toBe('Open-Meteo');
   });
 
+  it('fills wind and sun from the default model when the Met Office series lacks them', async () => {
+    const fetch = vi.fn(async (url: string) =>
+      new Response(JSON.stringify(url.includes('models=') ? hourly([5, 6], false) : { hourly: { time: hourly([5, 6]).hourly.time, temperature_2m: [1, 1], wind_speed_10m: [20, 30], shortwave_radiation: [0, 50] } })));
+    vi.stubGlobal('fetch', fetch);
+    const { weather } = await import('../server/proxy.ts');
+    const w = await weather(54, -3);
+    expect(w.source).toBe('Met Office');
+    expect(w.temperature_2m).toEqual([5, 6]);
+    expect(w.wind_speed_10m).toEqual([20, 30]);
+    expect(w.shortwave_radiation).toEqual([0, 50]);
+  });
+
   it('caches postcode lookups', async () => {
     const fetch = vi.fn(async () => new Response(JSON.stringify({ status: 200, result: { postcode: 'SW1A 1AA' } })));
     vi.stubGlobal('fetch', fetch);
@@ -62,7 +77,8 @@ describe('nightWindow()', () => {
     const w = nightWindow(time, temp, '2026-01-15')!;
     const vals = temp.slice(19, 32);
     expect(vals).toHaveLength(13);
-    expect(w).toEqual({ date: '2026-01-15', avg: Math.round(vals.reduce((a, b) => a + b) / 13), min: 4, max: 6 });
+    expect(w).toEqual({ date: '2026-01-15', avg: Math.round(vals.reduce((a, b) => a + b) / 13), min: 4, max: 6, wind: null });
+    expect(nightWindow(time, temp, '2026-01-15', temp.map(() => 18))!.wind).toBe(18);
   });
   it('returns null without enough data', () => {
     expect(nightWindow(time, temp, '2026-01-16')).toBeNull(); // only 5 hours left

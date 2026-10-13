@@ -23,7 +23,7 @@ export function Tonight({ s, d }: { s: State; d: Derived }) {
 
   const longNow = curItems.some(i => i.sleeve === 'long');
   const reasons = [
-    `Room should settle around ${f1(ov)}°C overnight (${f1(dv.room)}° now, ${dv.outdoor}° average outside 7pm–7am${wx.outdoorAuto && wx.outdoorRange ? ` (${wx.outdoorRange.min}–${wx.outdoorRange.max}°)` : ''}, ${d.thermo == null ? 'radiator off' : `radiator at ${f1(d.thermo)}°`}${K.n ? `; cooling rate learned from ${K.n} morning reading${K.n === 1 ? '' : 's'}` : ''}).`,
+    `Room should settle around ${f1(ov)}°C overnight (${f1(dv.room)}° now, ${dv.outdoor}° average outside 7pm–7am${wx.outdoorAuto && wx.outdoorRange ? ` (${wx.outdoorRange.min}–${wx.outdoorRange.max}°)` : ''}, ${d.thermo == null ? 'radiator off' : `radiator at ${f1(d.thermo)}°`}${d.wind != null ? `, wind ${d.wind} km/h` : ''}${K.n ? `; cooling rate learned from ${K.n} morning reading${K.n === 1 ? '' : 's'}` : ''}).`,
     `The standard guide for ${f1(ov)}°C is ${f1(guide)} TOG in total.`,
     L.n < 2 ? 'Not enough morning feedback yet to adjust the guide.'
       : Math.abs(LT.offset) < 0.1 ? `${L.n} rated nights say the guide is right for nights around ${Math.round(ov)}°C, so no adjustment.`
@@ -43,7 +43,7 @@ export function Tonight({ s, d }: { s: State; d: Derived }) {
     const rec: Night = {
       id: tonightN?.id ?? newId('n'), date: d.today, room: dv.room, outdoor: dv.outdoor, thermo: d.thermo, overnight: ov,
       items: curIds, tog: r1(total), target, rating: null, signs: [], note: '',
-      outdoorRange: wx.outdoorAuto ? wx.outdoorRange : null, door: dv.door, health: ui.health, humidity: dv.humidity, updatedAt: 0,
+      outdoorRange: wx.outdoorAuto ? wx.outdoorRange : null, wind: d.wind, sun: wx.today.sun, dayTemp: wx.today.dayTemp, door: dv.door, health: ui.health, humidity: dv.humidity, updatedAt: 0,
     };
     saveRecord('nights', rec);
     flash('Logged. Sleep well.');
@@ -80,7 +80,7 @@ export function Tonight({ s, d }: { s: State; d: Derived }) {
         <div style={cell(false, true)}>
           <div className="lbl">Outside 7pm–7am</div>
           <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1 }}>{dv.outdoor}°</div>
-          <div style={{ ...sub, color: wx.outdoorAuto ? 'var(--color-accent-700)' : 'var(--color-neutral-700)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{outdoorSrc}</div>
+          <div style={{ ...sub, color: wx.outdoorAuto ? 'var(--color-accent-700)' : 'var(--color-neutral-700)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{outdoorSrc}{d.wind != null ? ` · ${d.wind} km/h` : ''}</div>
           <Steppers style={{ marginTop: 6 }} down={step('outdoor', -1, -25, 40)} up={step('outdoor', 1, -25, 40)} />
         </div>
         <div style={cell(true, false)}>

@@ -42,7 +42,7 @@ export function sanitizeNight(r: any, pathId?: string): Night | null {
   const n: Night = {
     id: i, date: d,
     room: num(r.room), humidity: numOrNull(r.humidity), outdoor: num(r.outdoor), outdoorRange: range,
-    thermo: numOrNull(r.thermo), door: oneOf(r.door, ['closed', 'open'] as const, 'closed'),
+    thermo: numOrNull(r.thermo), wind: numOrNull(r.wind), sun: numOrNull(r.sun), dayTemp: numOrNull(r.dayTemp), door: oneOf(r.door, ['closed', 'open'] as const, 'closed'),
     overnight: num(r.overnight), items: strList(r.items), tog: num(r.tog),
     rating: rating(r.rating), signs: strList(r.signs), health: strList(r.health), note: str(r.note, 2000),
     morningRoom: numOrNull(r.morningRoom), morningHum: numOrNull(r.morningHum), actual: numOrNull(r.actual),

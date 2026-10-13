@@ -32,6 +32,9 @@ export interface Night {
   outdoor: number; // 7pm–7am average
   outdoorRange?: { min: number; max: number } | null;
   thermo: number | null; // radiator setpoint; null = radiator off
+  wind?: number | null; // night (7pm–7am) average wind, km/h
+  sun?: number | null; // that day's sunshine, kWh/m² (8am–6pm)
+  dayTemp?: number | null; // that day's average outside temp, 9am–6pm
   door?: Door;
   overnight: number; // model estimate
   items: string[];
@@ -141,9 +144,23 @@ export function baseTog(t: number): number {
 
 /** Standard share of the bedtime room–outside gap the room loses, on average, overnight. */
 export const DRIFT = 0.12;
+/** Wind (km/h, night average) at which the standard drift applies. */
+export const WIND_REF = 12;
+/** Standard extra cooling per km/h of wind above WIND_REF (2% per km/h). */
+export const WIND_COEF = 0.02;
+
+export interface CoolingModel { drift?: number; windCoef?: number; wind?: number | null }
+
+/** Effective drift for a night: windier nights lose heat faster. */
+export function driftFor(m: CoolingModel = {}): number {
+  const drift = m.drift ?? DRIFT, c = m.windCoef ?? WIND_COEF;
+  if (m.wind == null || !isFinite(m.wind)) return drift;
+  return drift * Math.max(0.7, Math.min(1.6, 1 + c * (m.wind - WIND_REF)));
+}
 
 /** Overnight room estimate. thermo = null means the radiator is off, so nothing stops the drift. */
-export function overnight(room: number, out: number, thermo: number | null, door?: Door | string, drift = DRIFT): number {
+export function overnight(room: number, out: number, thermo: number | null, door?: Door | string, cooling?: CoolingModel): number {
+  const drift = driftFor(cooling);
   const floor = thermo == null ? -Infinity : thermo - 0.5;
   const b = Math.min(room, Math.max(floor, room - Math.max(0, room - out) * drift));
   return r1(door === 'open' ? b - 0.3 : b);
@@ -217,34 +234,101 @@ export function learnAt(list: Learnable[], rate = 1, door: string | null | undef
 
 export interface DriftNight {
   id: string; date: string; room: number; outdoor: number; thermo?: number | null;
-  door?: string; morningRoom?: number | null;
+  door?: string; morningRoom?: number | null; wind?: number | null;
 }
 
 /**
- * Learns how fast this nursery cools: the share of the bedtime room–outside gap
- * lost on average overnight, from nights with a morning reading. Nights where the
- * radiator was holding the room up are skipped, and so are mild nights (gap < 3°)
- * that say little. Starts at the standard 0.12 and moves with the data
- * (weighted least squares with a prior worth two typical nights).
+ * Learns how this nursery cools, from nights with a morning reading:
+ *  - drift: the share of the bedtime room–outside gap lost on average overnight
+ *    (starts at the standard 0.12, weighted least squares with a prior worth two
+ *    typical nights);
+ *  - windCoef: how much faster it cools per km/h of night wind above 12 km/h
+ *    (starts at 2%/km/h, learned from nights with a wind record).
+ * Nights where the radiator was holding the room up are skipped, and so are
+ * mild nights (gap < 3°) that say little.
  */
-export function learnDrift(list: DriftNight[]): { drift: number; n: number } {
+export function learnDrift(list: DriftNight[]): { drift: number; windCoef: number; n: number; nWind: number } {
   const use = list.filter(x => {
     if (x.morningRoom == null || !isFinite(x.morningRoom) || !isFinite(x.outdoor)) return false;
     if (x.room - x.outdoor < 3) return false;
     const avg = (x.room + x.morningRoom) / 2;
     return x.thermo == null || avg > x.thermo - 0.5 + 0.2;
   }).sort(newestFirst);
+  const dropOf = (x: DriftNight) => x.room - (x.room + (x.morningRoom as number)) / 2 - (x.door === 'open' ? 0.3 : 0);
+  const windMul = (x: DriftNight, c: number) => (x.wind == null ? 1 : Math.max(0.7, Math.min(1.6, 1 + c * (x.wind - WIND_REF))));
+
+  // 1. drift, with each night's drop scaled back to a 12 km/h night using the standard wind effect
   const PRIOR = 2 * 8 * 8; // two nights with an 8° gap
   let sxy = PRIOR * DRIFT, sxx = PRIOR;
   use.forEach((x, i) => {
-    const w = Math.pow(0.9, i);
-    const gap = x.room - x.outdoor;
-    const drop = x.room - (x.room + (x.morningRoom as number)) / 2 - (x.door === 'open' ? 0.3 : 0);
-    sxy += w * drop * gap;
+    const w = Math.pow(0.9, i), gap = x.room - x.outdoor;
+    sxy += w * (dropOf(x) / windMul(x, WIND_COEF)) * gap;
     sxx += w * gap * gap;
   });
-  const drift = Math.max(0, Math.min(0.4, sxy / sxx));
-  return { drift: Math.round(drift * 1000) / 1000, n: use.length };
+  const drift = Math.max(0.02, Math.min(0.4, sxy / sxx));
+
+  // 2. wind sensitivity from what's left over on nights with a wind record
+  const windy = use.filter(x => x.wind != null);
+  const PC = 2 * 10 * 10; // two nights 10 km/h from the reference
+  let cxy = PC * WIND_COEF, cxx = PC;
+  windy.forEach((x, i) => {
+    const w = Math.pow(0.9, i), gap = x.room - x.outdoor, dx = (x.wind as number) - WIND_REF;
+    cxy += w * dx * (dropOf(x) / (gap * drift) - 1);
+    cxx += w * dx * dx;
+  });
+  const windCoef = Math.max(0, Math.min(0.06, cxy / cxx));
+  return { drift: Math.round(drift * 1000) / 1000, windCoef: Math.round(windCoef * 1000) / 1000, n: use.length, nWind: windy.length };
+}
+
+// ── Daytime sun and temperature → bedtime room (for forecast nights) ──
+
+/** Standard bedtime warming per kWh/m² of daytime sun, and per °C of daytime outside temp. */
+export const SUN_COEF = 0.25;
+export const DAYTEMP_COEF = 0.15;
+
+export interface BedtimeNight {
+  id: string; date: string; room: number; thermo?: number | null; sun?: number | null; dayTemp?: number | null;
+}
+
+/**
+ * Learns how much daytime sun and outside warmth raise the nursery at bedtime,
+ * from logged nights that recorded them (skipping nights the radiator was
+ * holding the room). Ridge regression on centred data, pulled towards the
+ * standard coefficients until there's enough spread in the data.
+ */
+export function learnBedtime(list: BedtimeNight[]): { sunCoef: number; tempCoef: number; n: number } {
+  const use = list.filter(x => x.sun != null && x.dayTemp != null && isFinite(x.room) && (x.thermo == null || x.room > x.thermo + 0.3))
+    .sort(newestFirst);
+  if (use.length < 3) return { sunCoef: SUN_COEF, tempCoef: DAYTEMP_COEF, n: use.length };
+  const ws = use.map((_, i) => Math.pow(0.95, i));
+  const W = ws.reduce((a, b) => a + b, 0);
+  const mean = (f: (x: BedtimeNight) => number) => use.reduce((a, x, i) => a + ws[i] * f(x), 0) / W;
+  const ms = mean(x => x.sun as number), mt = mean(x => x.dayTemp as number), mr = mean(x => x.room);
+  const P1 = 2 * 2 * 2, P2 = 2 * 4 * 4; // priors: two days 2 kWh / 4° from average
+  let a11 = P1, a12 = 0, a22 = P2, b1 = P1 * SUN_COEF, b2 = P2 * DAYTEMP_COEF;
+  use.forEach((x, i) => {
+    const s1 = (x.sun as number) - ms, t1 = (x.dayTemp as number) - mt, y = x.room - mr, w = ws[i];
+    a11 += w * s1 * s1; a12 += w * s1 * t1; a22 += w * t1 * t1; b1 += w * s1 * y; b2 += w * t1 * y;
+  });
+  const det = a11 * a22 - a12 * a12;
+  const sun = (b1 * a22 - b2 * a12) / det, temp = (a11 * b2 - a12 * b1) / det;
+  return {
+    sunCoef: Math.round(Math.max(0, Math.min(1.5, sun)) * 100) / 100,
+    tempCoef: Math.round(Math.max(0, Math.min(0.6, temp)) * 100) / 100,
+    n: use.length,
+  };
+}
+
+export interface DayWeather { sun: number | null; dayTemp: number | null }
+
+/** Bedtime room for a future night: tonight's room, moved by the difference in daytime sun and warmth. */
+export function bedtimeRoom(room: number, today: DayWeather, day: DayWeather,
+  m: { sunCoef: number; tempCoef: number }, thermo: number | null): number {
+  let delta = 0;
+  if (today.sun != null && day.sun != null) delta += m.sunCoef * (day.sun - today.sun);
+  if (today.dayTemp != null && day.dayTemp != null) delta += m.tempCoef * (day.dayTemp - today.dayTemp);
+  const r = room + Math.max(-3, Math.min(3, delta));
+  return r1(thermo == null ? r : Math.max(r, Math.min(room, thermo - 0.5)));
 }
 
 export interface Combo {
@@ -294,16 +378,32 @@ export const actualOf = (room: number, morningRoom: number, door?: string) =>
 
 // ── Forecast helpers ────────────────────────────────────────────────
 
-export interface NightWindow { date: string; avg: number; min: number; max: number }
+export interface NightWindow { date: string; avg: number; min: number; max: number; wind?: number | null }
+
+const meanOf = (v: (number | null)[]) => { const w = v.filter((x): x is number => x != null); return w.length ? w.reduce((a, b) => a + b, 0) / w.length : null; };
 
 /** 7pm today → 7am tomorrow (13 hourly values) from an Open-Meteo hourly series. */
-export function nightWindow(time: string[], temp: (number | null)[], date: string): NightWindow | null {
+export function nightWindow(time: string[], temp: (number | null)[], date: string, wind?: (number | null)[] | null): NightWindow | null {
   const i = time.indexOf(date + 'T19:00');
   if (i < 0) return null;
   const w = temp.slice(i, i + 13).filter((v): v is number => v != null);
   if (w.length < 6) return null;
   const avg = w.reduce((a, b) => a + b, 0) / w.length;
-  return { date, avg: Math.round(avg), min: Math.round(Math.min(...w)), max: Math.round(Math.max(...w)) };
+  const wa = wind ? meanOf(wind.slice(i, i + 13)) : null;
+  return { date, avg: Math.round(avg), min: Math.round(Math.min(...w)), max: Math.round(Math.max(...w)), wind: wa == null ? null : Math.round(wa) };
+}
+
+/** Daytime sun (kWh/m², 8am–6pm) and average outside temperature (9am–6pm) for a date. */
+export function dayWeather(time: string[], temp: (number | null)[], rad: (number | null)[] | null | undefined, date: string): DayWeather {
+  const idx = (h: number) => time.indexOf(`${date}T${String(h).padStart(2, '0')}:00`);
+  const i9 = idx(9), i8 = idx(8);
+  const dayTemp = i9 >= 0 ? meanOf(temp.slice(i9, i9 + 10)) : null;
+  let sun: number | null = null;
+  if (rad && i8 >= 0) {
+    const v = rad.slice(i8 + 1, i8 + 11); // values at 09:00…18:00 cover the hours 08–18
+    if (v.filter(x => x != null).length >= 8) sun = Math.round(v.reduce<number>((a, x) => a + (x ?? 0), 0) / 100) / 10;
+  }
+  return { sun, dayTemp: dayTemp == null ? null : Math.round(dayTemp * 10) / 10 };
 }
 
 /** Whole months from a YYYY-MM-DD birth date to `now`. */

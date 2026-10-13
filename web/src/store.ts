@@ -7,10 +7,10 @@
 import { useSyncExternalStore } from 'react';
 import { get, set } from 'idb-keyval';
 import {
-  DEFAULT_SETTINGS, isoLocal, nightWindow,
+  DEFAULT_SETTINGS, dayWeather, isoLocal, nightWindow, type DayWeather,
   type Door, type Item, type Nap, type Night, type NightWindow, type Settings, type Slot,
 } from '../../shared/model.ts';
-import { fetchForecast, fetchPostcode } from '../../shared/weather.ts';
+import { fetchForecast, fetchPostcode, type Forecast } from '../../shared/weather.ts';
 import { LOCAL } from './config.ts';
 
 export type Tab = 'tonight' | 'forecast' | 'nap' | 'morning' | 'wardrobe' | 'history';
@@ -30,7 +30,10 @@ export interface Wx {
   hourly: { time: string[]; temp: (number | null)[] } | null;
   outdoorAuto: boolean;
   outdoorRange: { min: number; max: number } | null;
-  fcNights: NightWindow[];
+  fcNights: (NightWindow & DayWeather)[];
+  /** Tonight's night-average wind (km/h) and today's daytime sun / warmth. */
+  wind: number | null;
+  today: DayWeather;
 }
 
 export interface ItemDraft extends Omit<Item, 'tog' | 'updatedAt'> { tog: string; updatedAt?: number; uploading?: boolean }
@@ -79,7 +82,7 @@ const initial: State = {
   loaded: false,
   data: { settings: { ...DEFAULT_SETTINGS, updatedAt: 0 }, items: [], nights: [], naps: [] },
   device: { room: 20.5, humidity: 55, outdoor: 9, thermo: 18, radiator: true, door: 'closed', napStart: '12:30', napEnd: '14:30', napRoom: 21, napDoor: 'closed' },
-  wx: { status: 'idle', src: '', hourly: null, outdoorAuto: false, outdoorRange: null, fcNights: [] },
+  wx: { status: 'idle', src: '', hourly: null, outdoorAuto: false, outdoorRange: null, fcNights: [], wind: null, today: { sun: null, dayTemp: null } },
   ui: {
     tab: tabFromPath(location.pathname), overrides: {}, health: [], fb: { rating: null, signs: [], note: '' },
     draft: null, draftErr: '', nightDraft: null, ndErr: '', catFilter: 'all', napPick: 0, napRating: null,
@@ -246,13 +249,22 @@ export function saveSettings(patch: Partial<Settings>) {
 
 // ── Weather & postcode ──────────────────────────────────────────────
 
-function applyWeather(src: string, time: string[], temp: (number | null)[]): boolean {
-  const t0 = nightWindow(time, temp, isoLocal(new Date()));
+type Series = (number | null)[] | null | undefined;
+
+function applyWeather(src: string, time: string[], temp: (number | null)[], wind?: Series, rad?: Series): boolean {
+  const today = isoLocal(new Date());
+  const t0 = nightWindow(time, temp, today, wind);
   if (!t0) return false;
-  const fc = [1, 2, 3].map(k => { const d = new Date(); d.setDate(d.getDate() + k); return nightWindow(time, temp, isoLocal(d)); })
-    .filter((x): x is NightWindow => !!x);
+  const fc = [1, 2, 3].map(k => {
+    const d = new Date(); d.setDate(d.getDate() + k);
+    const date = isoLocal(d), n = nightWindow(time, temp, date, wind);
+    return n ? { ...n, ...dayWeather(time, temp, rad, date) } : null;
+  }).filter((x): x is NightWindow & DayWeather => !!x);
   setState(s => ({
-    wx: { status: 'ok', src, hourly: { time, temp }, outdoorAuto: true, outdoorRange: { min: t0.min, max: t0.max }, fcNights: fc },
+    wx: {
+      status: 'ok', src, hourly: { time, temp }, outdoorAuto: true, outdoorRange: { min: t0.min, max: t0.max }, fcNights: fc,
+      wind: t0.wind ?? null, today: dayWeather(time, temp, rad, today),
+    },
     device: { ...s.device, outdoor: t0.avg },
   }));
   set('device', state.device).catch(() => {});
@@ -265,14 +277,13 @@ export async function fetchWeather() {
   try {
     const j = LOCAL
       ? await fetchForecast(Number(lat), Number(lon))
-      : await api<{ source: string; time: string[]; temperature_2m: (number | null)[] }>(
-        'GET', `/api/weather?lat=${encodeURIComponent(String(lat))}&lon=${encodeURIComponent(String(lon))}`);
-    if (!applyWeather(j.source, j.time, j.temperature_2m)) throw new Error('no window for tonight');
-    set('wx', { src: j.source, time: j.time, temp: j.temperature_2m, lat, lon }).catch(() => {});
+      : await api<Forecast>('GET', `/api/weather?lat=${encodeURIComponent(String(lat))}&lon=${encodeURIComponent(String(lon))}`);
+    if (!applyWeather(j.source, j.time, j.temperature_2m, j.wind_speed_10m, j.shortwave_radiation)) throw new Error('no window for tonight');
+    set('wx', { src: j.source, time: j.time, temp: j.temperature_2m, wind: j.wind_speed_10m, rad: j.shortwave_radiation, lat, lon }).catch(() => {});
   } catch {
     // Offline: fall back to the last forecast we saved, if it still covers tonight.
     const c = await get('wx').catch(() => null);
-    if (!(c && c.lat === lat && c.lon === lon && applyWeather(c.src, c.time, c.temp))) {
+    if (!(c && c.lat === lat && c.lon === lon && applyWeather(c.src, c.time, c.temp, c.wind, c.rad))) {
       setState(s => ({ wx: { ...s.wx, status: 'fail', outdoorAuto: false } }));
     }
   }

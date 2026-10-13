@@ -1,23 +1,25 @@
-import { SLOTS, baseTog, clampT, combos, dayLabel, f1, overnight, type Combo } from '../../../shared/model.ts';
+import { SLOTS, bedtimeRoom, baseTog, clampT, combos, dayLabel, f1, overnight, type Combo } from '../../../shared/model.ts';
 import type { Derived } from '../derive.ts';
 import { fetchWeather, type State } from '../store.ts';
 import { Header } from '../components/ui.tsx';
 
 export function Forecast({ s, d }: { s: State; d: Derived }) {
   const dv = s.device;
-  const { items, byId, K, offsetAt } = d;
+  const { items, byId, B, cooling, offsetAt } = d;
   const namesOfSlots = (c: Combo) => SLOTS.map(sl => byId(c.slots[sl.id])).filter(Boolean).map(i => i!.name);
   const allAvail = items.map(i => ({ ...i, available: true }));
 
   const rows = s.wx.fcNights.map(fn => {
-    const fov = overnight(dv.room, fn.avg, d.thermo, dv.door, K.drift);
+    // Bedtime room moved by that day's sun and warmth vs today's, then tonight's model with that night's wind.
+    const bed = bedtimeRoom(dv.room, s.wx.today, fn, B, d.thermo);
+    const fov = overnight(bed, fn.avg, d.thermo, dv.door, cooling(fn.wind));
     const ftg = clampT(baseTog(fov) + offsetAt(fov).offset);
     const c = combos(items, fov, ftg)[0];
     const ca = combos(allAvail, fov, ftg)[0];
     const wash = ca && (!c || ca.score < c.score - 0.1)
       ? SLOTS.map(sl => ca.slots[sl.id]).filter(id => id && !byId(id)!.available).map(id => byId(id)!.name) : [];
     return {
-      key: fn.date, label: dayLabel(fn.date), outside: fn.avg + '° avg · ' + fn.min + '–' + fn.max + '°', room: f1(fov) + '°',
+      key: fn.date, label: dayLabel(fn.date), outside: [fn.avg + '° avg · ' + fn.min + '–' + fn.max + '°', fn.wind != null ? 'wind ' + fn.wind + ' km/h' : '', sunLabel(fn.sun)].filter(Boolean).join(' · '), room: f1(fov) + '°', bed: f1(bed) + '°',
       tog: c ? f1(c.total) : '—', names: c ? namesOfSlots(c) : ['No sleeping bag available'],
       washText: wash.length ? 'Wash the ' + wash.join(' and ') + ' — it suits this night better (' + f1(ca.total) + ' TOG).' : '',
     };
@@ -27,7 +29,7 @@ export function Forecast({ s, d }: { s: State; d: Derived }) {
     <div>
       <Header kicker={`Next 3 nights · ${s.data.settings.city}`} title="Forecast" />
       <div style={{ padding: '10px 20px', borderBottom: '2px solid var(--color-divider)', background: 'var(--color-surface)', fontSize: 12, lineHeight: 1.4 }}>
-        Uses the 7pm–7am forecast with tonight’s room ({f1(dv.room)}°), radiator ({d.thermo == null ? 'off' : f1(d.thermo) + '°'}) and door settings.
+        Uses the 7pm–7am forecast and wind, tonight’s room ({f1(dv.room)}°) adjusted for each day’s sun and warmth, and tonight’s radiator ({d.thermo == null ? 'off' : f1(d.thermo) + '°'}) and door settings.
       </div>
       {!rows.length && (
         <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -46,7 +48,7 @@ export function Forecast({ s, d }: { s: State; d: Derived }) {
             <div style={{ padding: '10px 12px 12px 20px', borderRight: '2px solid var(--color-divider)' }}>
               <div style={{ fontSize: 36, fontWeight: 800, lineHeight: 1, color: 'var(--color-accent)' }}>{f.tog}</div>
               <div style={{ fontSize: 11, fontWeight: 800 }}>TOG</div>
-              <div style={{ fontSize: 11, color: 'var(--color-neutral-700)', marginTop: 6 }}>Room ≈ {f.room}</div>
+              <div style={{ fontSize: 11, color: 'var(--color-neutral-700)', marginTop: 6, whiteSpace: 'nowrap' }}>Bed ≈ {f.bed}</div><div style={{ fontSize: 11, color: 'var(--color-neutral-700)', whiteSpace: 'nowrap' }}>Night ≈ {f.room}</div>
             </div>
             <div style={{ padding: '10px 20px 12px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
               {f.names.map((n, i) => <div key={i} style={{ fontSize: 13, lineHeight: 1.3 }}>{n}</div>)}
@@ -61,4 +63,10 @@ export function Forecast({ s, d }: { s: State; d: Derived }) {
       ))}
     </div>
   );
+}
+
+/** Daytime sunshine in words (kWh/m² over 8am–6pm). */
+function sunLabel(sun: number | null | undefined) {
+  if (sun == null) return '';
+  return sun >= 3 ? 'sunny day' : sun >= 1.2 ? 'some sun' : 'dull day';
 }

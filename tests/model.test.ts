@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DRIFT, ageMonths, baseTog, clampT, learnAt, learnDrift, combos, distinctTotals, learnFrom, overnight, r1, type Item } from '../shared/model.ts';
+import { DRIFT, SUN_COEF, WIND_COEF, ageMonths, bedtimeRoom, dayWeather, driftFor, learnBedtime, baseTog, clampT, learnAt, learnDrift, combos, distinctTotals, learnFrom, overnight, r1, type Item } from '../shared/model.ts';
 import { seed } from '../shared/seed.ts';
 
 const S = seed(new Date('2026-01-15T21:00:00'));
@@ -199,7 +199,7 @@ describe('learnDrift()', () => {
     return { id: 'n' + i, date: `2026-01-${String(28 - i).padStart(2, '0')}`, room, outdoor, thermo: null, morningRoom: 2 * avg - room, ...extra };
   };
   it('starts at the standard 0.12 with no morning readings', () => {
-    expect(learnDrift(S.nights)).toEqual({ drift: DRIFT, n: 0 });
+    expect(learnDrift(S.nights)).toEqual({ drift: DRIFT, windCoef: WIND_COEF, n: 0, nWind: 0 });
   });
   it('moves towards how the room actually cools', () => {
     const few = learnDrift([0, 1].map(i => mk(i))), many = learnDrift(Array.from({ length: 20 }, (_, i) => mk(i)));
@@ -216,7 +216,61 @@ describe('learnDrift()', () => {
     expect(learnDrift(open).drift).toBeCloseTo(learnDrift(Array.from({ length: 20 }, (_, i) => mk(i))).drift, 2);
   });
   it('feeds overnight()', () => {
-    expect(overnight(20, 0, null, 'closed', 0.2)).toBe(16);
+    expect(overnight(20, 0, null, 'closed', { drift: 0.2 })).toBe(16);
     expect(overnight(20, 0, null, 'closed')).toBe(17.6);
+  });
+});
+
+describe('wind', () => {
+  it('cools windy nights faster and calm nights slower', () => {
+    expect(driftFor({ wind: 12 })).toBeCloseTo(0.12, 10);
+    expect(driftFor({ wind: 22 })).toBeCloseTo(0.12 * 1.2, 10);
+    expect(driftFor({ wind: 2 })).toBeCloseTo(0.12 * 0.8, 10);
+    expect(driftFor({ wind: 80 })).toBeCloseTo(0.12 * 1.6, 10); // capped
+    expect(overnight(20, 0, null, 'closed', { wind: 32 })).toBeLessThan(overnight(20, 0, null, 'closed', { wind: 12 }));
+  });
+  it('learns how sensitive the room is to wind', () => {
+    // A sheltered room: drift 0.15 whatever the wind.
+    const nights = Array.from({ length: 24 }, (_, i) => {
+      const room = 20, outdoor = 5, wind = [4, 12, 20, 30][i % 4], avg = room - 0.15 * (room - outdoor);
+      return { id: 'n' + i, date: `2026-02-${String(28 - i).padStart(2, '0')}`, room, outdoor, thermo: null, wind, morningRoom: 2 * avg - room };
+    });
+    const k = learnDrift(nights);
+    expect(k.nWind).toBe(24);
+    expect(k.windCoef).toBeLessThan(0.01);
+    expect(k.drift).toBeGreaterThan(0.13);
+    expect(k.drift).toBeLessThan(0.17);
+  });
+});
+
+describe('daytime sun and warmth', () => {
+  const time: string[] = [], temp: number[] = [], rad: number[] = [];
+  for (let h = 0; h < 24; h++) {
+    time.push(`2026-06-01T${String(h).padStart(2, '0')}:00`);
+    temp.push(h >= 9 && h <= 18 ? 18 : 10);
+    rad.push(h >= 9 && h <= 18 ? 400 : 0);
+  }
+  it('sums the day’s sun in kWh/m² and averages daytime temperature', () => {
+    expect(dayWeather(time, temp, rad, '2026-06-01')).toEqual({ sun: 4, dayTemp: 18 });
+    expect(dayWeather(time, temp, null, '2026-06-01')).toEqual({ sun: null, dayTemp: 18 });
+  });
+  it('moves the forecast bedtime room by the difference from today', () => {
+    const m = { sunCoef: SUN_COEF, tempCoef: 0.15 };
+    expect(bedtimeRoom(20, { sun: 1, dayTemp: 10 }, { sun: 4, dayTemp: 14 }, m, null)).toBe(r1(20 + 0.75 + 0.6));
+    expect(bedtimeRoom(20, { sun: 4, dayTemp: 14 }, { sun: 0, dayTemp: 4 }, m, 19)).toBe(18.5); // radiator floor
+    expect(bedtimeRoom(20, { sun: null, dayTemp: null }, { sun: 4, dayTemp: 14 }, m, null)).toBe(20);
+  });
+  it('learns from logged bedtimes how much sun warms the nursery', () => {
+    const nights = Array.from({ length: 20 }, (_, i) => {
+      const sun = i % 5, dayTemp = 10 + (i % 3) * 3;
+      return { id: 'n' + i, date: `2026-05-${String(28 - i).padStart(2, '0')}`, room: 19 + 0.6 * sun + 0.1 * dayTemp, thermo: null, sun, dayTemp };
+    });
+    const b = learnBedtime(nights);
+    expect(b.n).toBe(20);
+    expect(b.sunCoef).toBeGreaterThan(0.5);
+    expect(b.sunCoef).toBeLessThanOrEqual(0.6);
+    expect(b.tempCoef).toBeGreaterThan(0.09);
+    expect(b.tempCoef).toBeLessThan(0.14);
+    expect(learnBedtime(nights.slice(0, 2)).sunCoef).toBe(SUN_COEF);
   });
 });
