@@ -1,4 +1,4 @@
-import { HEALTH, SIGNS, SLOTS, SLOT_OF, actualOf, baseTog, dayLabel, f1, overnight, r1, sgn, type Item, type Night } from '../../../shared/model.ts';
+import { DRIFT, HEALTH, SIGNS, SLOTS, SLOT_OF, actualOf, baseTog, dayLabel, f1, overnight, r1, sgn, type Item, type Night } from '../../../shared/model.ts';
 import type { Derived } from '../derive.ts';
 import { deleteRecord, flash, saveRecord, setUi, type NightDraft, type State } from '../store.ts';
 import { ChipList, Header, RatingGrid, Seg, rLabel, rTone } from '../components/ui.tsx';
@@ -21,11 +21,18 @@ function openNight(n: Night, items: Item[]) {
 }
 
 export function History({ s, d }: { s: State; d: Derived }) {
-  const { L, child, sorted } = d;
+  const { L, K, offsetAt, child, sorted } = d;
   const rated = sorted.filter(n => n.rating != null);
   const insight = L.n < 2 ? `Rate a few more mornings and this will show whether ${child} runs warm or cool.`
     : Math.abs(L.offset) < 0.1 ? `${child} sleeps comfortably at the standard guide. No adjustment applied.`
-    : `${child} tends to run ${L.offset < 0 ? 'warm' : 'cool'}, so tonight’s target is ${Math.abs(L.offset).toFixed(1)} TOG ${L.offset < 0 ? 'below' : 'above'} the standard chart.`;
+    : `${child} tends to run ${L.offset < 0 ? 'warm' : 'cool'}: on average ${Math.abs(L.offset).toFixed(1)} TOG ${L.offset < 0 ? 'below' : 'above'} the standard chart.`;
+  // Cold vs mild nights, once there are a couple of rated nights near each.
+  const cold = offsetAt(16), mild = offsetAt(21);
+  const split = L.n >= 4 && cold.near >= 2 && mild.near >= 2 && Math.abs(cold.offset - mild.offset) >= 0.2
+    ? ` On colder nights (around 16°C) it’s ${sgn(cold.offset)} TOG; on milder nights (around 21°C) ${sgn(mild.offset)} TOG.` : '';
+  const cooling = K.n
+    ? `Learned from ${K.n} morning reading${K.n === 1 ? '' : 's'}: on a night 10° colder outside than the nursery, the room averages ${f1(K.drift * 10)}° below its bedtime temperature (standard ${f1(DRIFT * 10)}°).`
+    : 'Add the morning room reading when you rate a night, and it will learn how quickly your nursery cools.';
   const legend = (sw: React.CSSProperties, l: string) => (
     <span style={{ display: 'flex', gap: 5, alignItems: 'center' }}><span style={sw} />{l}</span>
   );
@@ -35,8 +42,14 @@ export function History({ s, d }: { s: State; d: Derived }) {
       <Header kicker={`${L.n} nights rated`} title="What it’s learned" />
       <div style={{ padding: '16px 20px', borderBottom: '2px solid var(--color-divider)', display: 'grid', gridTemplateColumns: 'auto minmax(0,1fr)', gap: 16, alignItems: 'center' }}>
         <div><div style={{ fontSize: 44, fontWeight: 800, lineHeight: 1, color: 'var(--color-accent)' }}>{sgn(L.offset)}</div><div style={{ fontSize: 12, fontWeight: 800 }}>TOG vs guide</div></div>
-        <div style={{ fontSize: 14, lineHeight: 1.4, textWrap: 'pretty' } as any}>{insight}</div>
+        <div style={{ fontSize: 14, lineHeight: 1.4, textWrap: 'pretty' } as any}>{insight}{split}</div>
       </div>
+      {s.data.settings.learning && (
+        <div style={{ padding: '12px 20px', borderBottom: '2px solid var(--color-divider)', background: 'var(--color-surface)', fontSize: 13, lineHeight: 1.4 }}>
+          <div style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--color-neutral-700)', marginBottom: 2 }}>Nursery cooling</div>
+          {cooling}
+        </div>
+      )}
       <div style={{ padding: '14px 20px 8px', borderBottom: '2px solid var(--color-divider)' }}>
         <h6 style={{ margin: '0 0 6px' }}>TOG worn vs overnight room temp</h6>
         <svg width="350" height="196" viewBox="0 0 350 196" style={{ display: 'block', fontFamily: 'var(--font-body)', maxWidth: '100%', height: 'auto' }}>
@@ -48,7 +61,7 @@ export function History({ s, d }: { s: State; d: Derived }) {
           ))}
           {[14, 16, 18, 20, 22, 24, 26].map(t => <text key={t} x={X(t) - 8} y="190" style={{ fontSize: 10, fill: 'var(--color-neutral-700)' }}>{t}°</text>)}
           <polyline points={pts.map(t => X(t) + ',' + Y(baseTog(t))).join(' ')} style={{ fill: 'none', stroke: 'var(--color-text)', strokeWidth: 1.5 }} />
-          <polyline points={pts.map(t => X(t) + ',' + Y(baseTog(t) + L.offset)).join(' ')} style={{ fill: 'none', stroke: 'var(--color-accent)', strokeWidth: 2, strokeDasharray: '5 4' }} />
+          <polyline points={pts.map(t => X(t) + ',' + Y(baseTog(t) + offsetAt(t).offset)).join(' ')} style={{ fill: 'none', stroke: 'var(--color-accent)', strokeWidth: 2, strokeDasharray: '5 4' }} />
           {rated.map(n => (
             <rect key={n.id} x={X((n.actual ?? n.overnight) as number) - 5} y={Y(n.tog) - 5} width="10" height="10"
               style={{ fill: n.rating! < 0 ? 'var(--color-bg)' : n.rating === 0 ? 'var(--color-text)' : 'var(--color-accent)', stroke: n.rating! > 0 ? 'var(--color-accent)' : 'var(--color-text)', strokeWidth: 2 }} />
@@ -110,7 +123,7 @@ export function NightEditor({ s, d }: { s: State; d: Derived }) {
     if (!orig) return setUi({ nightDraft: null });
     saveRecord('nights', {
       ...orig, room: r1(room), outdoor, thermo, humidity: hum != null && isNaN(hum) ? null : hum, morningRoom,
-      morningHum: mh == null || isNaN(mh) ? null : mh, door: nd.door, items: ids, tog, overnight: overnight(room, outdoor, thermo, nd.door),
+      morningHum: mh == null || isNaN(mh) ? null : mh, door: nd.door, items: ids, tog, overnight: overnight(room, outdoor, thermo, nd.door, d.K.drift),
       rating: nd.rating, health: nd.health, signs: nd.signs, note: nd.note,
       actual: morningRoom == null ? null : actualOf(r1(room), morningRoom, nd.door),
     });

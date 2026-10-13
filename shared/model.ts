@@ -139,10 +139,13 @@ export function baseTog(t: number): number {
   return GUIDE[GUIDE.length - 1][1];
 }
 
+/** Standard share of the bedtime room–outside gap the room loses, on average, overnight. */
+export const DRIFT = 0.12;
+
 /** Overnight room estimate. thermo = null means the radiator is off, so nothing stops the drift. */
-export function overnight(room: number, out: number, thermo: number | null, door?: Door | string): number {
+export function overnight(room: number, out: number, thermo: number | null, door?: Door | string, drift = DRIFT): number {
   const floor = thermo == null ? -Infinity : thermo - 0.5;
-  const b = Math.min(room, Math.max(floor, room - Math.max(0, room - out) * 0.12));
+  const b = Math.min(room, Math.max(floor, room - Math.max(0, room - out) * drift));
   return r1(door === 'open' ? b - 0.3 : b);
 }
 
@@ -159,24 +162,89 @@ export interface Learnable {
 }
 
 /** Personal learning offset from rated nights (or naps). */
-export function learnFrom(list: Learnable[], rate = 1, door?: string | null) {
-  const rated = list
-    .filter(x => x.rating != null)
-    .sort((a, b) => b.date.localeCompare(a.date) || String(b.id).localeCompare(String(a.id)));
-  if (!rated.length) return { offset: 0, n: 0, doorN: 0 };
+const newestFirst = (a: { date: string; id: string }, b: { date: string; id: string }) =>
+  b.date.localeCompare(a.date) || String(b.id).localeCompare(String(a.id));
+
+/** Rated nights, newest first, narrowed to the current door state once 3+ of those are rated. */
+function learnPool(list: Learnable[], door?: string | null) {
+  const rated = list.filter(x => x.rating != null).sort(newestFirst);
   let pool = rated, doorN = 0;
   if (door) {
     const same = rated.filter(x => (x.door || 'closed') === door);
     if (same.length >= 3 && same.length < rated.length) { pool = same; doorN = same.length; }
   }
+  return { rated, pool, doorN };
+}
+const tempOf = (x: Learnable) => (x.actual ?? x.overnight ?? x.room) as number;
+/** What the night says would have been right, minus what the guide said. */
+const residual = (x: Learnable) => (x.tog - (x.rating as number) * 0.3) - baseTog(tempOf(x));
+const healthW = (x: Learnable) => (x.health && x.health.length ? 0.2 : 1);
+
+/** Personal learning offset from rated nights (or naps): one number for all temperatures. */
+export function learnFrom(list: Learnable[], rate = 1, door?: string | null) {
+  const { rated, pool, doorN } = learnPool(list, door);
+  if (!rated.length) return { offset: 0, n: 0, doorN: 0 };
   let sw = 0, sr = 0;
   pool.forEach((x, i) => {
-    const w = Math.pow(0.8, i) * (x.health && x.health.length ? 0.2 : 1);
+    const w = Math.pow(0.8, i) * healthW(x);
     sw += w;
-    sr += w * ((x.tog - (x.rating as number) * 0.3) - baseTog((x.actual ?? x.overnight ?? x.room) as number));
+    sr += w * residual(x);
   });
   const conf = pool.length / (pool.length + 2);
   return { offset: r1(sr / sw * conf * rate), n: rated.length, doorN };
+}
+
+/**
+ * Offset for a night at temperature T. Leans on rated nights within a couple of
+ * degrees of T (Gaussian, σ = 2°C, slower 0.95 recency decay so last season still
+ * counts) and falls back to the overall learnFrom() offset where there is little
+ * nearby data. `near` is the effective number of nights close to T.
+ */
+export function learnAt(list: Learnable[], rate = 1, door: string | null | undefined, T: number) {
+  const g = learnFrom(list, rate, door);
+  const { pool } = learnPool(list, door);
+  let near = 0, sr = 0;
+  pool.forEach((x, i) => {
+    const w = Math.pow(0.95, i) * healthW(x) * Math.exp(-0.5 * ((tempOf(x) - T) / 2) ** 2);
+    near += w;
+    sr += w * residual(x);
+  });
+  if (near < 1e-6) return { ...g, near: 0 };
+  const local = (sr / near) * rate;
+  const PRIOR = 4; // nearby nights needed before they outweigh the overall offset
+  return { offset: r1((near * local + PRIOR * g.offset) / (near + PRIOR)), n: g.n, doorN: g.doorN, near };
+}
+
+export interface DriftNight {
+  id: string; date: string; room: number; outdoor: number; thermo?: number | null;
+  door?: string; morningRoom?: number | null;
+}
+
+/**
+ * Learns how fast this nursery cools: the share of the bedtime room–outside gap
+ * lost on average overnight, from nights with a morning reading. Nights where the
+ * radiator was holding the room up are skipped, and so are mild nights (gap < 3°)
+ * that say little. Starts at the standard 0.12 and moves with the data
+ * (weighted least squares with a prior worth two typical nights).
+ */
+export function learnDrift(list: DriftNight[]): { drift: number; n: number } {
+  const use = list.filter(x => {
+    if (x.morningRoom == null || !isFinite(x.morningRoom) || !isFinite(x.outdoor)) return false;
+    if (x.room - x.outdoor < 3) return false;
+    const avg = (x.room + x.morningRoom) / 2;
+    return x.thermo == null || avg > x.thermo - 0.5 + 0.2;
+  }).sort(newestFirst);
+  const PRIOR = 2 * 8 * 8; // two nights with an 8° gap
+  let sxy = PRIOR * DRIFT, sxx = PRIOR;
+  use.forEach((x, i) => {
+    const w = Math.pow(0.9, i);
+    const gap = x.room - x.outdoor;
+    const drop = x.room - (x.room + (x.morningRoom as number)) / 2 - (x.door === 'open' ? 0.3 : 0);
+    sxy += w * drop * gap;
+    sxx += w * gap * gap;
+  });
+  const drift = Math.max(0, Math.min(0.4, sxy / sxx));
+  return { drift: Math.round(drift * 1000) / 1000, n: use.length };
 }
 
 export interface Combo {

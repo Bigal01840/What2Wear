@@ -5,13 +5,13 @@ import { Header } from '../components/ui.tsx';
 
 export function Forecast({ s, d }: { s: State; d: Derived }) {
   const dv = s.device;
-  const { items, byId, L } = d;
+  const { items, byId, K, offsetAt } = d;
   const namesOfSlots = (c: Combo) => SLOTS.map(sl => byId(c.slots[sl.id])).filter(Boolean).map(i => i!.name);
   const allAvail = items.map(i => ({ ...i, available: true }));
 
   const rows = s.wx.fcNights.map(fn => {
-    const fov = overnight(dv.room, fn.avg, d.thermo, dv.door);
-    const ftg = clampT(baseTog(fov) + L.offset);
+    const fov = overnight(dv.room, fn.avg, d.thermo, dv.door, K.drift);
+    const ftg = clampT(baseTog(fov) + offsetAt(fov).offset);
     const c = combos(items, fov, ftg)[0];
     const ca = combos(allAvail, fov, ftg)[0];
     const wash = ca && (!c || ca.score < c.score - 0.1)

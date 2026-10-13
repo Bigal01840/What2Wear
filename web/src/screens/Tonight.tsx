@@ -14,7 +14,7 @@ const sub = { fontSize: 11, color: 'var(--color-neutral-700)', height: 16 };
 
 export function Tonight({ s, d }: { s: State; d: Derived }) {
   const dv = s.device, wx = s.wx, ui = s.ui;
-  const { child, ov, guide, L, humAdj, hasFever, target, best, cur, curItems, total, byId, tonightN, pending, all } = d;
+  const { child, ov, guide, L, LT, K, humAdj, hasFever, target, best, cur, curItems, total, byId, tonightN, pending, all } = d;
   const diff = r1(total - target);
   const step = (k: 'room' | 'outdoor' | 'thermo' | 'humidity', delta: number, lo: number, hi: number) => () => {
     setDevice({ [k]: Math.max(lo, Math.min(hi, r1(dv[k] + delta))) });
@@ -23,11 +23,11 @@ export function Tonight({ s, d }: { s: State; d: Derived }) {
 
   const longNow = curItems.some(i => i.sleeve === 'long');
   const reasons = [
-    `Room should settle around ${f1(ov)}°C overnight (${f1(dv.room)}° now, ${dv.outdoor}° average outside 7pm–7am${wx.outdoorAuto && wx.outdoorRange ? ` (${wx.outdoorRange.min}–${wx.outdoorRange.max}°)` : ''}, ${d.thermo == null ? 'radiator off' : `radiator at ${f1(d.thermo)}°`}).`,
+    `Room should settle around ${f1(ov)}°C overnight (${f1(dv.room)}° now, ${dv.outdoor}° average outside 7pm–7am${wx.outdoorAuto && wx.outdoorRange ? ` (${wx.outdoorRange.min}–${wx.outdoorRange.max}°)` : ''}, ${d.thermo == null ? 'radiator off' : `radiator at ${f1(d.thermo)}°`}${K.n ? `; cooling rate learned from ${K.n} morning reading${K.n === 1 ? '' : 's'}` : ''}).`,
     `The standard guide for ${f1(ov)}°C is ${f1(guide)} TOG in total.`,
     L.n < 2 ? 'Not enough morning feedback yet to adjust the guide.'
-      : Math.abs(L.offset) < 0.1 ? `${L.n} rated nights match the guide, so no adjustment.`
-      : `${child} has run ${L.offset < 0 ? 'warm' : 'cool'} across ${L.n} rated nights, so ${sgn(L.offset)} TOG.`,
+      : Math.abs(LT.offset) < 0.1 ? `${L.n} rated nights say the guide is right for nights around ${Math.round(ov)}°C, so no adjustment.`
+      : `${child} has run ${LT.offset < 0 ? 'warm' : 'cool'} on nights around ${Math.round(ov)}°C (from ${L.n} rated nights), so ${sgn(LT.offset)} TOG.`,
     ov < 19 ? `Below 19°C: long sleeves${longNow ? ' included' : ' recommended'}.` : ov > 23 ? 'Above 23°C: short sleeves, fewer layers.' : 'Between 19 and 23°C sleeve length is chosen by TOG fit.',
   ];
   if (dv.door === 'open') reasons.splice(1, 0, 'Door open: the room is expected to run about 0.3° cooler' + (L.doorN ? ', and learning uses only the ' + L.doorN + ' rated door-open nights.' : '.'));

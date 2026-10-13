@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ageMonths, baseTog, clampT, combos, distinctTotals, learnFrom, overnight, r1, type Item } from '../shared/model.ts';
+import { DRIFT, ageMonths, baseTog, clampT, learnAt, learnDrift, combos, distinctTotals, learnFrom, overnight, r1, type Item } from '../shared/model.ts';
 import { seed } from '../shared/seed.ts';
 
 const S = seed(new Date('2026-01-15T21:00:00'));
@@ -163,5 +163,60 @@ describe('ageMonths()', () => {
   it('returns null without a valid date', () => {
     expect(ageMonths('', now)).toBeNull();
     expect(ageMonths('27', now)).toBeNull();
+  });
+});
+
+describe('learnAt()', () => {
+  // Cold nights (~16°): needed 0.5 TOG more than the guide. Mild nights (~21°): spot on.
+  const nights = Array.from({ length: 12 }, (_, i) => {
+    const cold = i % 2 === 0, t = cold ? 16 : 21;
+    return { id: 'n' + i, date: `2026-01-${String(20 - i).padStart(2, '0')}`, rating: 0,
+      tog: baseTog(t) + (cold ? 0.5 : 0), room: t, actual: t };
+  });
+  it('learns a different adjustment for cold and mild nights', () => {
+    const cold = learnAt(nights, 1, null, 16).offset, mild = learnAt(nights, 1, null, 21).offset;
+    expect(cold).toBeGreaterThanOrEqual(0.4);
+    expect(mild).toBeLessThanOrEqual(0.1);
+    expect(learnFrom(nights).offset).toBe(0.2); // the single overall number sits in between
+  });
+  it('falls back to the overall offset far from any rated night', () => {
+    expect(learnAt(nights, 1, null, 27).offset).toBe(learnFrom(nights).offset);
+  });
+  it('is gentle with little data', () => {
+    expect(learnAt(nights.slice(0, 1), 1, null, 16).offset).toBeLessThan(0.5);
+    expect(learnAt([], 1, null, 16)).toMatchObject({ offset: 0, n: 0 });
+  });
+  it('agrees with the seed nights, which are all at similar temperatures', () => {
+    expect(learnAt(S.nights, 1, null, 19).offset).toBe(-0.3);
+    expect(learnFrom(S.nights).offset).toBe(-0.2);
+  });
+});
+
+describe('learnDrift()', () => {
+  // A nursery that loses 20% of the room–outside gap on average overnight.
+  const mk = (i: number, extra: object = {}) => {
+    const room = 20, outdoor = 4 + (i % 5), avg = room - 0.2 * (room - outdoor);
+    return { id: 'n' + i, date: `2026-01-${String(28 - i).padStart(2, '0')}`, room, outdoor, thermo: null, morningRoom: 2 * avg - room, ...extra };
+  };
+  it('starts at the standard 0.12 with no morning readings', () => {
+    expect(learnDrift(S.nights)).toEqual({ drift: DRIFT, n: 0 });
+  });
+  it('moves towards how the room actually cools', () => {
+    const few = learnDrift([0, 1].map(i => mk(i))), many = learnDrift(Array.from({ length: 20 }, (_, i) => mk(i)));
+    expect(few.drift).toBeGreaterThan(0.12);
+    expect(few.drift).toBeLessThan(many.drift);
+    expect(many.drift).toBeGreaterThan(0.18);
+    expect(many.drift).toBeLessThanOrEqual(0.2);
+  });
+  it('ignores nights where the radiator held the room up, and mild nights', () => {
+    expect(learnDrift([mk(0, { thermo: 20 }), mk(1, { outdoor: 19 })]).n).toBe(0);
+  });
+  it('allows for the open door', () => {
+    const open = Array.from({ length: 20 }, (_, i) => { const n = mk(i); return { ...n, door: 'open', morningRoom: n.morningRoom - 0.6 }; });
+    expect(learnDrift(open).drift).toBeCloseTo(learnDrift(Array.from({ length: 20 }, (_, i) => mk(i))).drift, 2);
+  });
+  it('feeds overnight()', () => {
+    expect(overnight(20, 0, null, 'closed', 0.2)).toBe(16);
+    expect(overnight(20, 0, null, 'closed')).toBe(17.6);
   });
 });
