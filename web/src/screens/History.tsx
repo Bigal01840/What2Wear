@@ -2,11 +2,8 @@ import { DRIFT, SUN_COEF, WIND_COEF, HEALTH, SIGNS, SLOTS, SLOT_OF, actualOf, ba
 import type { Derived } from '../derive.ts';
 import { deleteRecord, flash, saveRecord, setUi, type NightDraft, type State } from '../store.ts';
 import { ChipList, Header, RatingGrid, Seg, rLabel, rTone } from '../components/ui.tsx';
+import { EstimateChart, FitChart, OffsetTimeline, StatRow } from '../components/LearningCharts.tsx';
 
-const X = (t: number) => 36 + (Math.max(14, Math.min(26, t)) - 14) / 12 * 304;
-const Y = (v: number) => 172 - (Math.max(0, Math.min(4, v)) / 4) * 160;
-const pts: number[] = [];
-for (let t = 14; t <= 26; t += 0.5) pts.push(t);
 
 function openNight(n: Night, items: Item[]) {
   const str = (v: unknown) => (v == null ? '' : String(v));
@@ -39,9 +36,6 @@ export function History({ s, d }: { s: State; d: Derived }) {
   const sunTxt = B.n >= 3
     ? `Daytime sun: a sunny day leaves the nursery about ${f1(B.sunCoef * 3)}° warmer at bedtime than a dull one (learned from ${B.n} bedtimes). Used for the Forecast.`
     : `Daytime sun: assumed to add about ${f1(SUN_COEF * 3)}° at bedtime on a sunny day vs a dull one, until 3 logged bedtimes have sun data. Used for the Forecast.`;
-  const legend = (sw: React.CSSProperties, l: string) => (
-    <span style={{ display: 'flex', gap: 5, alignItems: 'center' }}><span style={sw} />{l}</span>
-  );
 
   return (
     <div>
@@ -50,6 +44,7 @@ export function History({ s, d }: { s: State; d: Derived }) {
         <div><div style={{ fontSize: 44, fontWeight: 800, lineHeight: 1, color: 'var(--color-accent)' }}>{sgn(L.offset)}</div><div style={{ fontSize: 12, fontWeight: 800 }}>TOG vs guide</div></div>
         <div style={{ fontSize: 14, lineHeight: 1.4, textWrap: 'pretty' } as any}>{insight}{split}</div>
       </div>
+      <StatRow nights={sorted} learnedFrom={L.n} mornings={sorted.filter(n => n.morningRoom != null).length} />
       {s.data.settings.learning && (
         <div style={{ padding: '12px 20px', borderBottom: '2px solid var(--color-divider)', background: 'var(--color-surface)', fontSize: 13, lineHeight: 1.4 }}>
           <div style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--color-neutral-700)', marginBottom: 2 }}>Nursery cooling</div>
@@ -57,31 +52,10 @@ export function History({ s, d }: { s: State; d: Derived }) {
           <div style={{ marginTop: 6 }}>{sunTxt}</div>
         </div>
       )}
-      <div style={{ padding: '14px 20px 8px', borderBottom: '2px solid var(--color-divider)' }}>
-        <h6 style={{ margin: '0 0 6px' }}>TOG worn vs overnight room temp</h6>
-        <svg width="350" height="196" viewBox="0 0 350 196" style={{ display: 'block', fontFamily: 'var(--font-body)', maxWidth: '100%', height: 'auto' }}>
-          {[0, 1, 2, 3, 4].map(v => (
-            <g key={v}>
-              <line x1="32" x2="346" y1={Y(v)} y2={Y(v)} style={{ stroke: 'var(--color-neutral-300)', strokeWidth: 1 }} />
-              <text x="0" y={Y(v) + 3} style={{ fontSize: 10, fill: 'var(--color-neutral-700)' }}>{v}</text>
-            </g>
-          ))}
-          {[14, 16, 18, 20, 22, 24, 26].map(t => <text key={t} x={X(t) - 8} y="190" style={{ fontSize: 10, fill: 'var(--color-neutral-700)' }}>{t}°</text>)}
-          <polyline points={pts.map(t => X(t) + ',' + Y(baseTog(t))).join(' ')} style={{ fill: 'none', stroke: 'var(--color-text)', strokeWidth: 1.5 }} />
-          <polyline points={pts.map(t => X(t) + ',' + Y(baseTog(t) + offsetAt(t).offset)).join(' ')} style={{ fill: 'none', stroke: 'var(--color-accent)', strokeWidth: 2, strokeDasharray: '5 4' }} />
-          {rated.map(n => (
-            <rect key={n.id} x={X((n.actual ?? n.overnight) as number) - 5} y={Y(n.tog) - 5} width="10" height="10"
-              style={{ fill: n.rating! < 0 ? 'var(--color-bg)' : n.rating === 0 ? 'var(--color-text)' : 'var(--color-accent)', stroke: n.rating! > 0 ? 'var(--color-accent)' : 'var(--color-text)', strokeWidth: 2 }} />
-          ))}
-        </svg>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 11, padding: '6px 0 4px', color: 'var(--color-neutral-800)' }}>
-          {legend({ width: 14, height: 2, background: 'var(--color-text)' }, 'Standard guide')}
-          {legend({ width: 14, height: 2, background: 'var(--color-accent)' }, `Adjusted for ${child}`)}
-          {legend({ width: 9, height: 9, border: '2px solid var(--color-text)' }, 'Cool')}
-          {legend({ width: 9, height: 9, background: 'var(--color-text)' }, 'Right')}
-          {legend({ width: 9, height: 9, background: 'var(--color-accent)' }, 'Warm')}
-        </div>
-      </div>
+      <FitChart nights={sorted} offsetAt={offsetAt} child={child} learned={s.data.settings.learning && L.n > 0}
+        tonight={d.best ? { ov: d.ov, tog: baseTog(d.ov) + d.LT.offset } : null} />
+      <OffsetTimeline nights={sorted} child={child} />
+      <EstimateChart nights={sorted} />
       <table className="table" style={{ fontSize: 13 }}>
         <thead><tr><th style={{ paddingLeft: 20 }}>Night · tap to edit</th><th>Overnight</th><th>TOG</th><th style={{ paddingRight: 20 }}>Result</th></tr></thead>
         <tbody>
