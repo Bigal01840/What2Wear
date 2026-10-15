@@ -27,7 +27,7 @@ export interface Device {
 export interface Wx {
   status: 'idle' | 'loading' | 'ok' | 'fail';
   src: string;
-  hourly: { time: string[]; temp: (number | null)[] } | null;
+  hourly: { time: string[]; temp: (number | null)[]; wind?: (number | null)[] | null; rad?: (number | null)[] | null } | null;
   outdoorAuto: boolean;
   outdoorRange: { min: number; max: number } | null;
   fcNights: (NightWindow & DayWeather)[];
@@ -58,6 +58,20 @@ export interface Ui {
   learnMsg: string;
   notif: boolean;
   pcMsg: string; pcErr: boolean;
+  /** Tonight tab: a past night being filled in (null = tonight). */
+  bedDate: string | null;
+  pastBed: PastBed | null;
+  /** Morning tab: a chosen night to rate (null = the latest unrated one). */
+  rateDate: string | null;
+}
+
+/** Bedtime inputs for a past night, kept apart from tonight's. */
+export interface PastBed {
+  room: number; humidity: number; outdoor: number; thermo: number; radiator: boolean; door: Door;
+  outdoorAuto: boolean; outdoorRange: { min: number; max: number } | null;
+  wind: number | null; sun: number | null; dayTemp: number | null;
+  /** Tonight's health chips, restored when going back to tonight. */
+  prevHealth: string[];
 }
 
 export interface State {
@@ -86,7 +100,7 @@ const initial: State = {
   ui: {
     tab: tabFromPath(location.pathname), overrides: {}, health: [], fb: { rating: null, signs: [], note: '' },
     draft: null, draftErr: '', nightDraft: null, ndErr: '', catFilter: 'all', napPick: 0, napRating: null,
-    sheet: false, toast: '', learnMsg: '', notif: false, pcMsg: '', pcErr: false,
+    sheet: false, toast: '', learnMsg: '', notif: false, pcMsg: '', pcErr: false, bedDate: null, pastBed: null, rateDate: null,
   },
 };
 
@@ -113,6 +127,8 @@ export function setUi(patch: Partial<Ui> | ((u: Ui) => Partial<Ui>)) {
 }
 
 export function setTab(tab: Tab, patch: Partial<Ui> = {}) {
+  if (tab !== 'tonight' && state.ui.bedDate) chooseBedDate(null);
+  if (tab !== 'morning' && state.ui.rateDate) setUi({ rateDate: null });
   const path = tab === 'tonight' ? '/' : '/' + tab;
   if (location.pathname !== path) history.pushState(null, '', path);
   setUi({ tab, ...patch });
@@ -262,7 +278,7 @@ function applyWeather(src: string, time: string[], temp: (number | null)[], wind
   }).filter((x): x is NightWindow & DayWeather => !!x);
   setState(s => ({
     wx: {
-      status: 'ok', src, hourly: { time, temp }, outdoorAuto: true, outdoorRange: { min: t0.min, max: t0.max }, fcNights: fc,
+      status: 'ok', src, hourly: { time, temp, wind, rad }, outdoorAuto: true, outdoorRange: { min: t0.min, max: t0.max }, fcNights: fc,
       wind: t0.wind ?? null, today: dayWeather(time, temp, rad, today),
     },
     device: { ...s.device, outdoor: t0.avg },
@@ -406,4 +422,72 @@ export async function restoreBackup(b: Backup) {
   await set('data', state.data);
   await set('device', state.device);
   fetchWeather();
+}
+
+// ── Filling in a missed night ───────────────────────────────────────
+
+/** Bedtime inputs on screen: tonight's (per phone), or the past night being filled in. */
+export function activeBed(s: State): Device & Partial<PastBed> {
+  return s.ui.bedDate && s.ui.pastBed ? { ...s.device, ...s.ui.pastBed } : s.device;
+}
+
+export function setBed(patch: Partial<PastBed>) {
+  if (state.ui.bedDate) setUi(u => ({ pastBed: u.pastBed ? { ...u.pastBed, ...patch } : u.pastBed }));
+  else setDevice(patch as Partial<Device>);
+}
+
+/**
+ * Switch the Tonight tab to a past night (or back to tonight with null / today).
+ * A night already logged loads its readings, health and outfit; otherwise the
+ * outside figures come from the weather history (last 7 days) where available.
+ */
+export function chooseBedDate(date: string | null) {
+  const today = isoLocal(new Date());
+  const prev = state.ui.pastBed?.prevHealth ?? state.ui.health;
+  if (!date || date >= today) {
+    setUi({ bedDate: null, pastBed: null, overrides: {}, health: state.ui.bedDate ? prev : state.ui.health });
+    return;
+  }
+  const dv = state.device, wx = state.wx;
+  const rec = state.data.nights.find(n => n.date === date);
+  let bed: PastBed;
+  if (rec) {
+    bed = {
+      room: rec.room, humidity: rec.humidity ?? dv.humidity, outdoor: rec.outdoor,
+      thermo: rec.thermo ?? dv.thermo, radiator: rec.thermo != null, door: rec.door || 'closed',
+      outdoorAuto: !!rec.outdoorRange, outdoorRange: rec.outdoorRange ?? null,
+      wind: rec.wind ?? null, sun: rec.sun ?? null, dayTemp: rec.dayTemp ?? null, prevHealth: prev,
+    };
+  } else {
+    const h = wx.hourly;
+    const nw = h ? nightWindow(h.time, h.temp, date, h.wind) : null;
+    const day = h ? dayWeather(h.time, h.temp, h.rad, date) : { sun: null, dayTemp: null };
+    bed = {
+      room: dv.room, humidity: dv.humidity, outdoor: nw ? nw.avg : dv.outdoor,
+      thermo: dv.thermo, radiator: dv.radiator !== false, door: dv.door,
+      outdoorAuto: !!nw, outdoorRange: nw ? { min: nw.min, max: nw.max } : null,
+      wind: nw?.wind ?? null, sun: day.sun, dayTemp: day.dayTemp, prevHealth: prev,
+    };
+  }
+  // Show what was worn, if it was logged.
+  const overrides: Ui['overrides'] = {};
+  if (rec) {
+    const slotOf: Record<string, Slot> = { bag: 'bag', suit: 'mid', pjs: 'mid', body: 'base', socks: 'socks' };
+    (['base', 'mid', 'bag', 'socks'] as Slot[]).forEach(sl => { overrides[sl] = null; });
+    rec.items.forEach(id => { const it = state.data.items.find(i => i.id === id); if (it) overrides[slotOf[it.cat]] = id; });
+  }
+  setUi({ bedDate: date, pastBed: bed, overrides, health: rec?.health ?? [] });
+  document.querySelector('.scr-main')?.scrollTo(0, 0);
+}
+
+/** Morning tab: rate a chosen night (null = back to the latest unrated one). */
+export function chooseRateDate(date: string | null) {
+  const rec = date ? state.data.nights.find(n => n.date === date) : null;
+  setUi({
+    rateDate: date || null, learnMsg: '',
+    fb: rec ? {
+      rating: rec.rating, signs: rec.signs || [], note: rec.note || '', health: rec.health || [],
+      mRoom: rec.morningRoom ?? undefined, mHum: rec.morningHum ?? undefined,
+    } : { rating: null, signs: [], note: '' },
+  });
 }

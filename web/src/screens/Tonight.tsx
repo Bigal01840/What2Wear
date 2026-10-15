@@ -1,7 +1,7 @@
-import { HEALTH, SLOTS, f1, newId, r1, sgn, SHOW_ALTERNATIVES, type Night } from '../../../shared/model.ts';
+import { HEALTH, SLOTS, dayLabel, f1, newId, r1, sgn, SHOW_ALTERNATIVES, type Night } from '../../../shared/model.ts';
 import { ageLabel, distinctTotals, pendingLabel, sleeveTxt, swapCands, type Derived } from '../derive.ts';
-import { flash, saveRecord, setDevice, setTab, setUi, setWx, type State } from '../store.ts';
-import { BigNum, ChipList, Header, I, Seg, Steppers, bgImg } from '../components/ui.tsx';
+import { activeBed, chooseBedDate, chooseRateDate, flash, saveRecord, setBed, setTab, setUi, setWx, type State } from '../store.ts';
+import { BigNum, ChipList, DatePick, Header, I, Seg, Steppers, bgImg } from '../components/ui.tsx';
 import { newItemDraft } from './Wardrobe.tsx';
 
 const cell = (left: boolean, bottom: boolean) => ({
@@ -13,17 +13,21 @@ const cell = (left: boolean, bottom: boolean) => ({
 const sub = { fontSize: 11, color: 'var(--color-neutral-700)', height: 16 };
 
 export function Tonight({ s, d }: { s: State; d: Derived }) {
-  const dv = s.device, wx = s.wx, ui = s.ui;
+  const dv = activeBed(s), wx = s.wx, ui = s.ui;
+  const { past, bedDate } = d;
+  // Outside figures: the live forecast tonight, or the weather history for a past night.
+  const outAuto = past ? !!dv.outdoorAuto : wx.outdoorAuto;
+  const outRange = past ? dv.outdoorRange ?? null : wx.outdoorRange;
   const { child, ov, guide, L, LT, K, humAdj, hasFever, target, best, cur, curItems, total, byId, tonightN, pending, all } = d;
   const diff = r1(total - target);
   const step = (k: 'room' | 'outdoor' | 'thermo' | 'humidity', delta: number, lo: number, hi: number) => () => {
-    setDevice({ [k]: Math.max(lo, Math.min(hi, r1(dv[k] + delta))) });
-    if (k === 'outdoor') setWx({ outdoorAuto: false });
+    setBed({ [k]: Math.max(lo, Math.min(hi, r1(dv[k] + delta))) });
+    if (k === 'outdoor') { if (past) setBed({ outdoorAuto: false }); else setWx({ outdoorAuto: false }); }
   };
 
   const longNow = curItems.some(i => i.sleeve === 'long');
   const reasons = [
-    `Room should settle around ${f1(ov)}°C overnight (${f1(dv.room)}° now, ${dv.outdoor}° average outside 7pm–7am${wx.outdoorAuto && wx.outdoorRange ? ` (${wx.outdoorRange.min}–${wx.outdoorRange.max}°)` : ''}, ${d.thermo == null ? 'radiator off' : `radiator at ${f1(d.thermo)}°`}${d.wind != null ? `, wind ${d.wind} km/h` : ''}${K.n ? `; cooling rate learned from ${K.n} morning reading${K.n === 1 ? '' : 's'}` : ''}).`,
+    `Room should settle around ${f1(ov)}°C overnight (${f1(dv.room)}° now, ${dv.outdoor}° average outside 7pm–7am${outAuto && outRange ? ` (${outRange.min}–${outRange.max}°)` : ''}, ${d.thermo == null ? 'radiator off' : `radiator at ${f1(d.thermo)}°`}${d.wind != null ? `, wind ${d.wind} km/h` : ''}${K.n ? `; cooling rate learned from ${K.n} morning reading${K.n === 1 ? '' : 's'}` : ''}).`,
     `The standard guide for ${f1(ov)}°C is ${f1(guide)} TOG in total.`,
     L.n < 2 ? 'Not enough morning feedback yet to adjust the guide.'
       : Math.abs(LT.offset) < 0.1 ? `${L.n} rated nights say the guide is right for nights around ${Math.round(ov)}°C, so no adjustment.`
@@ -41,15 +45,20 @@ export function Tonight({ s, d }: { s: State; d: Derived }) {
   const logTonight = () => {
     if (!cur) return;
     const rec: Night = {
-      id: tonightN?.id ?? newId('n'), date: d.today, room: dv.room, outdoor: dv.outdoor, thermo: d.thermo, overnight: ov,
+      id: tonightN?.id ?? newId('n'), date: bedDate, room: dv.room, outdoor: dv.outdoor, thermo: d.thermo, overnight: ov,
       items: curIds, tog: r1(total), target, rating: null, signs: [], note: '',
-      outdoorRange: wx.outdoorAuto ? wx.outdoorRange : null, wind: d.wind, sun: wx.today.sun, dayTemp: wx.today.dayTemp, door: dv.door, health: ui.health, humidity: dv.humidity, updatedAt: 0,
+      outdoorRange: outAuto ? outRange : null, wind: d.wind,
+      sun: past ? dv.sun ?? null : wx.today.sun, dayTemp: past ? dv.dayTemp ?? null : wx.today.dayTemp, door: dv.door, health: ui.health, humidity: dv.humidity, updatedAt: 0,
     };
+    // Keep the morning half if this night was already rated.
+    if (tonightN) Object.assign(rec, { rating: tonightN.rating, signs: tonightN.signs, note: tonightN.note, morningRoom: tonightN.morningRoom, morningHum: tonightN.morningHum, actual: tonightN.actual });
     saveRecord('nights', rec);
-    flash('Logged. Sleep well.');
+    flash(past ? `Saved ${dayLabel(bedDate)}.` : 'Logged. Sleep well.');
   };
 
-  const outdoorSrc = wx.status === 'loading' ? 'Fetching…'
+  const outdoorSrc = past
+    ? (outAuto && outRange ? `${wx.src || 'Weather'} history · ${outRange.min}–${outRange.max}°` : 'Manual')
+    : wx.status === 'loading' ? 'Fetching…'
     : wx.outdoorAuto && wx.outdoorRange ? `${wx.src || ''} · ${wx.outdoorRange.min}–${wx.outdoorRange.max}°`
     : wx.outdoorAuto ? 'Live forecast' : wx.status === 'fail' ? 'Manual · offline' : 'Manual';
   const empty = d.items.length === 0;
@@ -57,12 +66,24 @@ export function Tonight({ s, d }: { s: State; d: Derived }) {
   return (
     <div>
       <Header
-        kicker={new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
-        title="Tonight"
-        right={<button className="btn btn-secondary btn-icon" onClick={() => setUi({ sheet: true })} aria-label="Settings">{I.sliders()}</button>}
+        kicker={(past ? 'Night of ' : '') + new Date(bedDate + 'T12:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+        title={past ? 'Missed night' : 'Tonight'}
+        right={
+          <div style={{ display: 'flex', gap: 6 }}>
+            <DatePick label="Choose a night" value={bedDate} max={d.today} onPick={chooseBedDate} />
+            <button className="btn btn-secondary btn-icon" onClick={() => setUi({ sheet: true })} aria-label="Settings">{I.sliders()}</button>
+          </div>
+        }
       />
 
-      {pending && (
+      {past && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px 10px 20px', background: 'var(--color-surface)', borderBottom: '2px solid var(--color-divider)', fontSize: 13, lineHeight: 1.4 }}>
+          <span style={{ flex: 1 }}>{tonightN ? 'Already logged. Change anything and save again.' : 'Enter that night’s bedtime readings, then use Swap to match what she wore.'}</span>
+          <button className="btn btn-ghost" style={{ flex: 'none' }} onClick={() => chooseBedDate(null)}>Back to tonight</button>
+        </div>
+      )}
+
+      {pending && !past && (
         <button onClick={() => setTab('morning', { learnMsg: '' })} style={{ display: 'flex', width: '100%', alignItems: 'center', gap: 12, padding: '14px 20px', background: 'var(--color-accent)', color: 'var(--color-bg)', border: 0, textAlign: 'left', font: 'inherit', cursor: 'pointer', borderBottom: '2px solid var(--color-divider)' }}>
           {I.sun(22, { flex: 'none' })}
           <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 800, fontSize: 15 }}>How was {pendingLabel(pending.date)}?</div><div style={{ fontSize: 12 }}>Rate it so tonight’s pick can learn from it</div></div>
@@ -72,28 +93,28 @@ export function Tonight({ s, d }: { s: State; d: Derived }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', borderBottom: '2px solid var(--color-divider)' }}>
         <div style={cell(true, true)}>
-          <div className="lbl">Room now</div>
-          <BigNum value={dv.room} step={0.1} label="Room temperature" unit="°" onCommit={v => setDevice({ room: r1(v) })} />
+          <div className="lbl">{past ? 'Room at bedtime' : 'Room now'}</div>
+          <BigNum value={dv.room} step={0.1} label="Room temperature" unit="°" onCommit={v => setBed({ room: r1(v) })} />
           <div style={sub}>Nursery</div>
           <Steppers style={{ marginTop: 6 }} down={step('room', -0.1, 10, 32)} up={step('room', 0.1, 10, 32)} />
         </div>
         <div style={cell(false, true)}>
           <div className="lbl">Outside 7pm–7am</div>
           <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1 }}>{dv.outdoor}°</div>
-          <div style={{ ...sub, color: wx.outdoorAuto ? 'var(--color-accent-700)' : 'var(--color-neutral-700)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{outdoorSrc}{d.wind != null ? ` · ${d.wind} km/h` : ''}</div>
+          <div style={{ ...sub, color: outAuto ? 'var(--color-accent-700)' : 'var(--color-neutral-700)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{outdoorSrc}{d.wind != null ? ` · ${d.wind} km/h` : ''}</div>
           <Steppers style={{ marginTop: 6 }} down={step('outdoor', -1, -25, 40)} up={step('outdoor', 1, -25, 40)} />
         </div>
         <div style={cell(true, false)}>
           <div className="lbl">Radiator</div>
           {dv.radiator !== false
-            ? <BigNum value={dv.thermo} step={0.5} label="Radiator setpoint" unit="°" onCommit={v => setDevice({ thermo: v })} />
+            ? <BigNum value={dv.thermo} step={0.5} label="Radiator setpoint" unit="°" onCommit={v => setBed({ thermo: v })} />
             : <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1, borderBottom: '2px solid transparent' }}>Off</div>}
           <div style={sub}>{dv.radiator !== false ? 'Thermostat' : 'No heating overnight'}</div>
           <Steppers style={{ marginTop: 6 }} disabled={dv.radiator === false} down={step('thermo', -0.5, 5, 30)} up={step('thermo', 0.5, 5, 30)} />
         </div>
         <div style={cell(false, false)}>
           <div className="lbl">Humidity</div>
-          <BigNum value={dv.humidity} step={0.5} label="Humidity" unit="%" onCommit={v => setDevice({ humidity: v })} />
+          <BigNum value={dv.humidity} step={0.5} label="Humidity" unit="%" onCommit={v => setBed({ humidity: v })} />
           <div style={sub}>Nursery</div>
           <Steppers style={{ marginTop: 6 }} down={step('humidity', -5, 20, 95)} up={step('humidity', 5, 20, 95)} />
         </div>
@@ -101,11 +122,11 @@ export function Tonight({ s, d }: { s: State; d: Derived }) {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', borderBottom: '2px solid var(--color-divider)' }}>
         <div className="lbl" style={{ flex: 1 }}>Nursery door</div>
-        <Seg name="door" value={dv.door} opts={[['closed', 'Closed'], ['open', 'Open']]} onPick={v => setDevice({ door: v })} />
+        <Seg name="door" value={dv.door} opts={[['closed', 'Closed'], ['open', 'Open']]} onPick={v => setBed({ door: v })} />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', borderBottom: '2px solid var(--color-divider)' }}>
         <div className="lbl" style={{ flex: 1 }}>Radiator</div>
-        <Seg name="radiator" value={dv.radiator !== false} opts={[[true, 'On'], [false, 'Off']]} onPick={v => setDevice({ radiator: v })} />
+        <Seg name="radiator" value={dv.radiator !== false} opts={[[true, 'On'], [false, 'Off']]} onPick={v => setBed({ radiator: v })} />
       </div>
       <div style={{ padding: '10px 20px 12px', borderBottom: '2px solid var(--color-divider)' }}>
         <div className="lbl" style={{ marginBottom: 8 }}>Tonight {child} is</div>
@@ -166,7 +187,7 @@ export function Tonight({ s, d }: { s: State; d: Derived }) {
                   <div key={sl.id} style={{ display: 'grid', gridTemplateColumns: '52px minmax(0,1fr) auto', gap: 12, alignItems: 'center', padding: '10px 0', borderTop: '1px solid var(--color-divider)' }}>
                     <div style={{ width: 52, height: 52, background: 'var(--color-surface)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 6 }}>
                       {it?.photoUrl
-                        ? <div className="grayscale" role="img" aria-label="Item photo" style={{ width: 52, height: 52, flex: 'none', marginLeft: -6, backgroundSize: 'cover', backgroundPosition: 'center', backgroundImage: bgImg(it.photoUrl) }} />
+                        ? <div role="img" aria-label="Item photo" style={{ width: 52, height: 52, flex: 'none', marginLeft: -6, backgroundSize: 'cover', backgroundPosition: 'center', backgroundImage: bgImg(it.photoUrl) }} />
                         : <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--color-neutral-600)' }}>{it ? f1(it.tog) : '—'}</span>}
                     </div>
                     <div style={{ minWidth: 0 }}>
@@ -189,11 +210,15 @@ export function Tonight({ s, d }: { s: State; d: Derived }) {
 
           <div style={{ padding: '12px 20px 20px' }}>
             {!tonightN ? (
-              <button className="btn btn-primary" style={{ width: '100%', height: 52, justifyContent: 'flex-start', padding: '0 16px', fontSize: 16, gap: 10 }} onClick={logTonight}>{I.check()}Dressed — log tonight</button>
+              <button className="btn btn-primary" style={{ width: '100%', height: 52, justifyContent: 'flex-start', padding: '0 16px', fontSize: 16, gap: 10 }} onClick={logTonight}>{I.check()}{past ? `Log the night of ${dayLabel(bedDate)}` : 'Dressed — log tonight'}</button>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 14px', background: 'var(--color-surface)' }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 800, fontSize: 15 }}>{I.check({ color: 'var(--color-accent)' })}Logged · {f1(tonightN.tog)} TOG</div>
-                <div style={{ fontSize: 13 }}>Rate it in the morning, with the nursery reading.</div>
+                {past
+                  ? (tonightN.rating == null
+                    ? <button className="btn btn-secondary" style={{ alignSelf: 'flex-start' }} onClick={() => { const date = bedDate; setTab('morning'); chooseRateDate(date); }}>Rate this night</button>
+                    : <div style={{ fontSize: 13 }}>Rated: change it on the Morning tab’s calendar.</div>)
+                  : <div style={{ fontSize: 13 }}>Rate it in the morning, with the nursery reading.</div>}
                 {tonightN.items.join() !== curIds.join() && <button className="btn btn-secondary" style={{ alignSelf: 'flex-start' }} onClick={logTonight}>Update log with this outfit</button>}
               </div>
             )}

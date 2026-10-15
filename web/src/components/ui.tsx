@@ -137,3 +137,21 @@ export function rLabel(v: number | null) {
 }
 
 export const bgImg = (url: string) => (url ? `url("${url}")` : 'none');
+
+/**
+ * Calendar button that opens the phone's date picker. The native date input sits
+ * invisibly on top of the button, so a tap on iPhone/Android opens it directly.
+ */
+export function DatePick({ value, max, onPick, label }: { value: string; max: string; onPick: (date: string) => void; label: string }) {
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex', flex: 'none' }}>
+      <span className="btn btn-secondary btn-icon" aria-hidden="true">{I.calendar()}</span>
+      <input
+        type="date" aria-label={label} value={value} max={max}
+        onChange={e => { if (e.target.value) onPick(e.target.value); }}
+        onClick={e => { try { (e.currentTarget as any).showPicker?.(); } catch { /* not supported */ } }}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', fontSize: 16, border: 0, padding: 0 }}
+      />
+    </span>
+  );
+}

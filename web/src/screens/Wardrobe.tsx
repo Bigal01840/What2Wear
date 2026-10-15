@@ -35,7 +35,7 @@ export function Wardrobe({ s }: { s: State }) {
           <button key={i.id} className="hover-surface" onClick={() => setUi({ draft: { ...i, tog: String(i.tog) }, draftErr: '' })} style={{ display: 'flex', flexDirection: 'column', background: 'var(--color-bg)', border: 0, padding: 0, textAlign: 'left', font: 'inherit', color: 'inherit', cursor: 'pointer', opacity: i.available ? 1 : 0.6 }}>
             <div style={{ width: '100%', aspectRatio: '1/1', background: 'var(--color-surface)', overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: 10 }}>
               {i.photoUrl ? (
-                <div className="grayscale" role="img" aria-label="Item photo" style={{ position: 'absolute', inset: 0, backgroundSize: 'cover', backgroundPosition: 'center', backgroundImage: bgImg(i.photoUrl) }} />
+                <div role="img" aria-label="Item photo" style={{ position: 'absolute', inset: 0, backgroundSize: 'cover', backgroundPosition: 'center', backgroundImage: bgImg(i.photoUrl) }} />
               ) : (
                 <>
                   <span className="lbl">{CATS.find(c => c.id === i.cat)!.label}</span>
@@ -128,7 +128,7 @@ export function ItemEditor({ s }: { s: State }) {
           <label style={{ width: 120, height: 120, flex: 'none', background: 'var(--color-surface)', border: '1px solid var(--color-divider)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'flex-start', padding: 10, gap: 4, cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
             <input type="file" accept="image/*" onChange={onPhoto} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
             {shown ? (
-              <div className="grayscale" role="img" aria-label="Item photo" style={{ position: 'absolute', inset: 0, backgroundSize: 'cover', backgroundPosition: 'center', backgroundImage: bgImg(shown), opacity: d.uploading ? 0.6 : 1 }} />
+              <div role="img" aria-label="Item photo" style={{ position: 'absolute', inset: 0, backgroundSize: 'cover', backgroundPosition: 'center', backgroundImage: bgImg(shown), opacity: d.uploading ? 0.6 : 1 }} />
             ) : (
               <>{I.camera()}<span style={{ fontSize: 12, fontWeight: 600 }}>Add photo</span></>
             )}

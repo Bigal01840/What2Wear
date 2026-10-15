@@ -32,7 +32,7 @@ function align(time: string[], src: any, k: string): (number | null)[] | null {
 export async function fetchForecast(lat: number, lon: number): Promise<Forecast> {
   const la = lat.toFixed(2), lo = lon.toFixed(2);
   const url = (m?: string) =>
-    `https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&hourly=${VARS}&forecast_days=5&timezone=auto${m ? '&models=' + m : ''}`;
+    `https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&hourly=${VARS}&forecast_days=5&past_days=7&timezone=auto${m ? '&models=' + m : ''}`;
   let source: Forecast['source'] = 'Met Office';
   let j: any = null, fallback: any = null;
   try { j = await getJson(url('ukmo_seamless')); } catch { j = null; }

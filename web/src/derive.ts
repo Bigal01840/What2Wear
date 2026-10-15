@@ -3,11 +3,13 @@ import {
   DAYTEMP_COEF, DRIFT, FEVER, LEARNING_RATE, SUN_COEF, WIND_COEF, ageMonths, learnAt, learnBedtime, learnDrift, SLOTS, SLOT_OF, baseTog, clampT, combos, dayLabel, distinctTotals, humAdjOf, isoLocal,
   learnFrom, overnight, type Item, type Night,
 } from '../../shared/model.ts';
-import type { State } from './store.ts';
+import { activeBed, type State } from './store.ts';
 
 export function derive(s: State) {
   const { items, nights, settings } = s.data;
-  const d = s.device;
+  // Bedtime inputs on screen: tonight's, or a missed night being filled in.
+  const d = activeBed(s);
+  const past = !!s.ui.bedDate;
   const byId = (id: string | null | undefined) => (id ? items.find(i => i.id === id) : undefined);
   const child = settings.child || 'Our toddler';
   const today = isoLocal(new Date());
@@ -22,7 +24,7 @@ export function derive(s: State) {
   const cooling = (wind: number | null | undefined) => ({ drift: K.drift, windCoef: K.windCoef, wind: wind ?? null });
   const thermo = d.radiator === false ? null : d.thermo; // null: radiator off
   // Tonight's wind only applies while the outside figure is the live forecast.
-  const wind = s.wx.outdoorAuto ? s.wx.wind : null;
+  const wind = past ? (d.outdoorAuto ? d.wind ?? null : null) : s.wx.outdoorAuto ? s.wx.wind : null;
   const ov = overnight(d.room, d.outdoor, thermo, d.door, cooling(wind));
   const guide = baseTog(ov);
   const L = learn(nights, d.door); // overall warm/cool offset (History, Morning messages)
@@ -44,11 +46,12 @@ export function derive(s: State) {
   const sorted = [...nights].sort((a, b) => b.date.localeCompare(a.date));
   const pending = sorted.find(n => n.rating == null && n.date < today);
   const fbTarget = sorted.find(n => n.rating == null);
-  const tonightN = nights.find(n => n.date === today);
+  const bedDate = s.ui.bedDate ?? today;
+  const tonightN = nights.find(n => n.date === bedDate);
   const namesOf = (n: Night) => n.items.map(id => byId(id)?.name ?? '(deleted item)').join(' + ');
 
   return {
-    items, byId, child, today, thermo, K, B, cooling, wind, ov, guide, L, LT, offsetAt, learn, humAdj, hasFever, feverAdj, target,
+    items, byId, child, today, bedDate, past, thermo, K, B, cooling, wind, ov, guide, L, LT, offsetAt, learn, humAdj, hasFever, feverAdj, target,
     all, best, cur, curItems, total, sorted, pending, fbTarget, tonightN, namesOf,
   };
 }
